@@ -1,0 +1,21 @@
+{
+  "name": "vyrra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vyrra - AI Generation & Training Platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "echo \"Run frontend or backend individually\"",
+    "web": "npm run dev --workspace=web",
+    "api": "uvicorn app.main:app --reload",
+    "lint": "echo \"Coming soon\"",
+    "build": "echo \"Coming soon\""
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
