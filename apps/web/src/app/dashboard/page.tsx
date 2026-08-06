@@ -11,7 +11,7 @@ export default function DashboardPage() {
     <AppShell>
       <div className="space-y-10">
         {/* Header */}
-        <<DashboardHeader />
+        <DashboardHeader />
 
         {/* Statistics */}
         <StatsGrid />
