@@ -1,49 +1,91 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Bell, Cloud, MoonStar, UserCircle2 } from "lucide-react";
+import {
+  Bell,
+  Cloud,
+  Cpu,
+  Moon,
+  Search,
+  UserCircle2,
+} from "lucide-react";
 
 export function TopBar() {
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-background px-8">
+    <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-zinc-800 bg-zinc-950/80 px-8 backdrop-blur-xl">
+      {/* Left */}
       <div>
-        <h1 className="text-xl font-bold tracking-tight">
-          Welcome to Vyrra
-        </h1>
+        <h2 className="text-2xl font-bold tracking-tight">
+          Dashboard
+        </h2>
 
-        <p className="text-sm text-muted-foreground">
-          Create. Train. Deploy.
+        <p className="mt-1 text-sm text-zinc-400">
+          Welcome back to Vyrra
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Provider */}
-        <Badge
-          variant="secondary"
-          className="flex items-center gap-2 px-3 py-1"
-        >
-          <Cloud className="h-4 w-4 text-green-500" />
-          Local
-        </Badge>
+      {/* Right */}
+      <div className="flex items-center gap-4">
+        {/* Search */}
+        <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-violet-500 hover:bg-zinc-800">
+          <Search size={18} />
+        </button>
 
-        {/* Benachrichtigungen */}
-        <Button variant="ghost" size="icon">
-          <Bell className="h-5 w-5" />
-        </Button>
+        {/* GPU Status */}
+        <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2">
+          <Cpu size={18} className="text-emerald-400" />
 
-        {/* Theme (später funktionsfähig) */}
-        <Button variant="ghost" size="icon">
-          <MoonStar className="h-5 w-5" />
-        </Button>
+          <div>
+            <p className="text-xs text-zinc-500">
+              GPU
+            </p>
 
-        {/* Benutzer */}
-        <Button variant="ghost" className="gap-2">
-          <UserCircle2 className="h-5 w-5" />
-          <span className="hidden md:inline">
-            Guest
-          </span>
-        </Button>
+            <p className="text-sm font-medium">
+              Local
+            </p>
+          </div>
+        </div>
+
+        {/* AWS */}
+        <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2">
+          <Cloud size={18} className="text-sky-400" />
+
+          <div>
+            <p className="text-xs text-zinc-500">
+              Cloud
+            </p>
+
+            <p className="text-sm font-medium">
+              My AWS
+            </p>
+          </div>
+        </div>
+
+        {/* Notifications */}
+        <button className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-violet-500 hover:bg-zinc-800">
+          <Bell size={18} />
+
+          <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500" />
+        </button>
+
+        {/* Theme */}
+        <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-violet-500 hover:bg-zinc-800">
+          <Moon size={18} />
+        </button>
+
+        {/* User */}
+        <button className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 transition hover:border-violet-500">
+          <UserCircle2 size={30} />
+
+          <div className="text-left">
+            <p className="text-sm font-medium">
+              Chris
+            </p>
+
+            <p className="text-xs text-zinc-500">
+              Local Account
+            </p>
+          </div>
+        </button>
       </div>
     </header>
   );

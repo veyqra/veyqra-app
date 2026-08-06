@@ -2,22 +2,17 @@ import Link from "next/link";
 
 export function Logo() {
   return (
-    <Link
-      href="/dashboard"
-      className="flex items-center gap-3 select-none"
-    >
-      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
-        <span className="text-lg font-black tracking-tight">V</span>
+    <Link href="/dashboard" className="flex items-center gap-4">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-600 text-xl font-black shadow-lg shadow-violet-600/30">
+        V
       </div>
 
-      <div className="flex flex-col">
-        <span className="text-lg font-bold tracking-tight">
-          Vyrra
-        </span>
+      <div>
+        <h1 className="text-xl font-bold">Vyrra</h1>
 
-        <span className="text-xs text-muted-foreground">
+        <p className="text-xs text-zinc-400">
           Create. Train. Deploy.
-        </span>
+        </p>
       </div>
     </Link>
   );

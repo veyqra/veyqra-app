@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
@@ -8,14 +9,20 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-screen overflow-hidden bg-zinc-950 text-white">
+      {/* Sidebar */}
       <Sidebar />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      {/* Main Area */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Header */}
         <TopBar />
 
-        <main className="flex-1 overflow-y-auto p-8">
-          {children}
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto bg-zinc-950">
+          <div className="mx-auto w-full max-w-[1700px] p-8">
+            {children}
+          </div>
         </main>
       </div>
     </div>
