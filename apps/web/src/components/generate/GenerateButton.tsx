@@ -2,16 +2,18 @@
 
 import { LoaderCircle, Play } from "lucide-react";
 
-import { generateModels } from "@/lib/generate-demo-data";
+import {
+  createGeneration,
+  getGeneration,
+} from "@/services/generation-api";
 import { useGenerateStore } from "@/stores/generate-store";
-import type { GeneratedImage, GenerationJob } from "@/types/generate";
+import type { GenerationJob } from "@/types/generate";
+
+const POLL_INTERVAL_MS = 500;
+const POLL_TIMEOUT_MS = 60_000;
 
 export function GenerateButton() {
   const prompt = useGenerateStore((state) => state.prompt);
-  const modelId = useGenerateStore((state) => state.modelId);
-  const resolutionId = useGenerateStore(
-    (state) => state.resolutionId
-  );
   const isGenerating = useGenerateStore(
     (state) => state.isGenerating
   );
@@ -29,60 +31,42 @@ export function GenerateButton() {
   );
   const getRequest = useGenerateStore((state) => state.getRequest);
 
-  function handleGenerate() {
+  async function handleGenerate() {
     if (!prompt.trim() || isGenerating) {
       return;
     }
 
-    const request = getRequest();
-    const selectedModel = generateModels.find(
-      (model) => model.id === modelId
-    );
-    const jobId = crypto.randomUUID();
-
-    const job: GenerationJob = {
-      id: jobId,
-      prompt: request.prompt,
-      modelName: selectedModel?.name ?? "Unknown model",
-      status: "running",
-      progress: 10,
-      createdAt: new Date().toISOString(),
-    };
-
-    addJob(job);
     setIsGenerating(true);
 
-    window.setTimeout(() => {
-      updateJob(jobId, { progress: 45 });
-    }, 500);
+    try {
+      const createdJob = await createGeneration(getRequest());
 
-    window.setTimeout(() => {
-      updateJob(jobId, { progress: 80 });
-    }, 1000);
+      addJob(createdJob);
 
-    window.setTimeout(() => {
-      const placeholderImage =
-        "https://placehold.co/1024x1024/18181b/a78bfa?text=Vyrra+Preview";
-
-      const image: GeneratedImage = {
-        id: crypto.randomUUID(),
-        prompt: request.prompt,
-        imageUrl: placeholderImage,
-        modelName: selectedModel?.name ?? "Unknown model",
-        width: resolutionId === "landscape" ? 1152 : 1024,
-        height: resolutionId === "portrait" ? 1152 : 1024,
-        createdAt: new Date().toISOString(),
-      };
-
-      updateJob(jobId, {
-        status: "completed",
-        progress: 100,
+      const finishedJob = await pollGeneration(createdJob.id, (job) => {
+        updateJob(job.id, job);
       });
 
-      addHistoryImage(image);
-      setPreviewImageUrl(image.imageUrl);
+      updateJob(finishedJob.id, finishedJob);
+
+      if (
+        finishedJob.status === "completed" &&
+        finishedJob.image
+      ) {
+        addHistoryImage(finishedJob.image);
+        setPreviewImageUrl(finishedJob.image.imageUrl);
+      }
+
+      if (finishedJob.status === "failed") {
+        console.error(
+          finishedJob.error ?? "Generation failed"
+        );
+      }
+    } catch (error) {
+      console.error("Unable to generate image:", error);
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
   }
 
   return (
@@ -105,4 +89,35 @@ export function GenerateButton() {
       )}
     </button>
   );
+}
+
+async function pollGeneration(
+  jobId: string,
+  onUpdate: (job: GenerationJob) => void
+): Promise<GenerationJob> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < POLL_TIMEOUT_MS) {
+    const job = await getGeneration(jobId);
+
+    onUpdate(job);
+
+    if (
+      job.status === "completed" ||
+      job.status === "failed" ||
+      job.status === "cancelled"
+    ) {
+      return job;
+    }
+
+    await wait(POLL_INTERVAL_MS);
+  }
+
+  throw new Error("Generation polling timed out");
+}
+
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
 }

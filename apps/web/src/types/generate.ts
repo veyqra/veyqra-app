@@ -35,6 +35,8 @@ export type GenerationJob = {
   status: GenerationStatus;
   progress: number;
   createdAt: string;
+  error?: string;
+  image?: GeneratedImage;
 };
 
 export type GeneratedImage = {
