@@ -7,6 +7,7 @@ from app.core.config import get_settings
 from app.api.routes.comfyui import router as comfyui_router
 from app.api.routes.images import router as images_router
 from app.api.routes.models import router as models_router
+from app.api.routes.history import router as history_router
 
 settings = get_settings()
 
@@ -37,6 +38,11 @@ app.include_router(
 
 app.include_router(
     models_router,
+    prefix=settings.api_prefix,
+)
+
+app.include_router(
+    history_router,
     prefix=settings.api_prefix,
 )
 

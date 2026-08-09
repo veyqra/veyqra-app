@@ -7,6 +7,8 @@ from typing import Any
 from uuid import uuid4
 from urllib.parse import urlencode
 from pathlib import PurePosixPath
+from app.schemas.history import HistoryItemResponse
+from app.services.history_service import history_service
 
 from app.core.config import get_settings
 from app.schemas.generation import (
@@ -28,6 +30,7 @@ class StoredGenerationJob:
     response: GenerationJobResponse
     request: GenerateRequest
     comfy_prompt_id: str | None = None
+    history_saved: bool = False
 
 
 class GenerationService:
@@ -208,6 +211,30 @@ class GenerationService:
             height=self._get_height(stored_job.request.resolution_id),
             created_at=datetime.now(UTC),
         )
+        
+        if not stored_job.history_saved:
+            history_item = HistoryItemResponse(
+                id=image.id,
+                prompt=stored_job.request.prompt,
+                negative_prompt=stored_job.request.negative_prompt,
+                model_id=stored_job.request.model_id,
+                model_name=current.model_name,
+                lora_id=stored_job.request.lora_id,
+                lora_strength=stored_job.request.lora_strength,
+                image_url=image.image_url,
+                width=image.width,
+                height=image.height,
+                seed=stored_job.request.seed,
+                steps=stored_job.request.steps,
+                guidance=stored_job.request.guidance,
+                created_at=image.created_at,
+            )
+
+            history_service.add_item(
+            history_item
+            )
+            
+            stored_job.history_saved = True
 
         updated = current.model_copy(
             update={
