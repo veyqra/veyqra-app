@@ -1,5 +1,7 @@
 import { apiRequest } from "@/lib/api-client";
+
 import type {
+  ModelCapability,
   ModelCatalog,
   ModelFamily,
   ModelItem,
@@ -20,6 +22,10 @@ type ApiModelItem = {
   filename: string;
   kind: ModelKind;
   family: ModelFamily;
+
+  capabilities: ModelCapability[];
+
+  selectable_for_generate: boolean;
 };
 
 type ApiModelCatalog = {
@@ -34,6 +40,9 @@ function mapModel(item: ApiModelItem): ModelItem {
     filename: item.filename,
     kind: item.kind,
     family: item.family,
+    capabilities: item.capabilities,
+    selectableForGenerate:
+      item.selectable_for_generate,
   };
 }
 

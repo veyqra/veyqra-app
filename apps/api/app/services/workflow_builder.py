@@ -41,6 +41,11 @@ def load_flux_workflow_template() -> dict[str, Any]:
 def build_flux_workflow(
     request: GenerateRequest,
 ) -> dict[str, Any]:
+
+    validate_flux_text_to_image_model(
+        request.model_id
+    )
+    
     workflow = deepcopy(
         load_flux_workflow_template()
     )
@@ -151,3 +156,23 @@ def build_flux_workflow(
     )
 
     return workflow
+    
+def validate_flux_text_to_image_model(
+    filename: str,
+) -> None:
+    name = filename.lower()
+
+    unsupported_markers = (
+        "fill",
+        "inpaint",
+        "inpainting",
+    )
+
+    if any(
+        marker in name
+        for marker in unsupported_markers
+    ):
+        raise ValueError(
+            f"Model '{filename}' is not compatible "
+            "with the FLUX text-to-image workflow."
+        )

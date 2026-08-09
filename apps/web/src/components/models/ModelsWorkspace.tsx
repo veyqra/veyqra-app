@@ -41,7 +41,10 @@ export function ModelsWorkspace() {
       const data = await getModelCatalog();
       setCatalog(data);
     } catch (loadError) {
-      console.error("Unable to load model catalog:", loadError);
+      console.error(
+        "Unable to load model catalog:",
+        loadError
+      );
 
       setError(
         "Vyrra could not load the model catalog from ComfyUI."
@@ -52,8 +55,43 @@ export function ModelsWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadModels();
-  }, [loadModels]);
+      let cancelled = false;
+
+      async function initializeModels() {
+        try {
+          const data = await getModelCatalog();
+
+          if (cancelled) {
+            return;
+          }
+
+          setCatalog(data);
+        } catch (loadError) {
+          if (cancelled) {
+            return;
+          }
+
+          console.error(
+            "Unable to load model catalog:",
+            loadError
+          );
+
+          setError(
+            "Vyrra could not load the model catalog from ComfyUI."
+          );
+        } finally {
+          if (!cancelled) {
+            setIsLoading(false);
+          }
+        }
+      }
+
+      void initializeModels();
+
+      return () => {
+        cancelled = true;
+      };
+    }, []);
 
   const filteredModels = useMemo(
     () =>
@@ -158,7 +196,9 @@ export function ModelsWorkspace() {
         <div className="flex min-h-80 items-center justify-center">
           <div className="text-center text-zinc-500">
             <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-violet-400" />
-            <p className="mt-4">Loading ComfyUI models...</p>
+            <p className="mt-4">
+              Loading ComfyUI models...
+            </p>
           </div>
         </div>
       ) : (
@@ -195,7 +235,9 @@ function ModelSection({
     <section className="space-y-5">
       <div>
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold">{title}</h2>
+          <h2 className="text-xl font-semibold">
+            {title}
+          </h2>
 
           <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-400">
             {items.length}
@@ -227,9 +269,15 @@ function ModelSection({
   );
 }
 
-function ModelCard({ item }: { item: ModelItem }) {
+function ModelCard({
+  item,
+}: {
+  item: ModelItem;
+}) {
   const Icon =
-    item.kind === "lora" ? Sparkles : BrainCircuit;
+    item.kind === "lora"
+      ? Sparkles
+      : BrainCircuit;
 
   return (
     <article className="group rounded-2xl border border-zinc-800 bg-zinc-900 p-5 transition hover:border-violet-500/70 hover:bg-zinc-900/80">
@@ -254,10 +302,26 @@ function ModelCard({ item }: { item: ModelItem }) {
             {item.filename}
           </p>
 
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="rounded-lg border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-xs capitalize text-zinc-400">
               {item.kind}
             </span>
+
+            {item.capabilities.map((capability) => (
+              <span
+                key={capability}
+                className="rounded-lg border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-xs text-zinc-400"
+              >
+                {capabilityName(capability)}
+              </span>
+            ))}
+
+            {item.kind === "diffusion" &&
+              !item.selectableForGenerate && (
+                <span className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs text-amber-300">
+                  Specialized
+                </span>
+              )}
 
             <span className="flex items-center gap-1.5 text-xs text-emerald-400">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
@@ -326,17 +390,41 @@ function filterItems(
   search: string,
   family: ModelFamily | "all"
 ): ModelItem[] {
-  const normalizedSearch = search.trim().toLowerCase();
+  const normalizedSearch =
+    search.trim().toLowerCase();
 
   return items.filter((item) => {
     const matchesFamily =
-      family === "all" || item.family === family;
+      family === "all" ||
+      item.family === family;
 
     const matchesSearch =
       normalizedSearch.length === 0 ||
-      item.name.toLowerCase().includes(normalizedSearch) ||
-      item.filename.toLowerCase().includes(normalizedSearch);
+      item.name
+        .toLowerCase()
+        .includes(normalizedSearch) ||
+      item.filename
+        .toLowerCase()
+        .includes(normalizedSearch);
 
     return matchesFamily && matchesSearch;
   });
+}
+
+function capabilityName(
+  capability: ModelItem["capabilities"][number]
+): string {
+  switch (capability) {
+    case "text_to_image":
+      return "Text → Image";
+
+    case "image_to_image":
+      return "Image → Image";
+
+    case "inpaint":
+      return "Inpaint";
+
+    default:
+      return capability;
+  }
 }

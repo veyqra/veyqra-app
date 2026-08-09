@@ -4,6 +4,7 @@ from pathlib import PurePosixPath
 
 from app.core.config import get_settings
 from app.schemas.model import (
+    ModelCapability,
     ModelCatalogResponse,
     ModelFamily,
     ModelItemResponse,
@@ -75,7 +76,7 @@ class ModelService:
         if not isinstance(input_definition, list):
             return []
 
-        if len(input_definition) == 0:
+        if not input_definition:
             return []
 
         values = input_definition[0]
@@ -83,22 +84,36 @@ class ModelService:
         if not isinstance(values, list):
             return []
 
-        return sorted(
-            str(value)
-            for value in values
-        )
+        return sorted(str(value) for value in values)
 
     def _create_item(
         self,
         filename: str,
         kind: ModelKind,
     ) -> ModelItemResponse:
+        family = self._detect_family(filename)
+
+        if kind == ModelKind.DIFFUSION:
+            capabilities = self._detect_model_capabilities(filename)
+        else:
+            capabilities = []
+
+        selectable_for_generate = (
+            kind == ModelKind.LORA
+            or (
+                family == ModelFamily.FLUX
+                and ModelCapability.TEXT_TO_IMAGE in capabilities
+            )
+        )
+
         return ModelItemResponse(
             id=filename,
             name=self._display_name(filename),
             filename=filename,
             kind=kind,
-            family=self._detect_family(filename),
+            family=family,
+            capabilities=capabilities,
+            selectable_for_generate=selectable_for_generate,
         )
 
     def _display_name(self, filename: str) -> str:
@@ -115,7 +130,12 @@ class ModelService:
                 basename = basename[:-len(suffix)]
                 break
 
-        return basename.replace("_", " ").replace("-", " ").strip()
+        return (
+            basename
+            .replace("_", " ")
+            .replace("-", " ")
+            .strip()
+        )
 
     def _detect_family(
         self,
@@ -137,6 +157,34 @@ class ModelService:
             return ModelFamily.SD15
 
         return ModelFamily.UNKNOWN
+
+    def _detect_model_capabilities(
+        self,
+        filename: str,
+    ) -> list[ModelCapability]:
+        name = filename.lower()
+
+        #
+        # Fill / inpainting models
+        #
+        fill_markers = (
+            "fill",
+            "inpaint",
+            "inpainting",
+        )
+
+        if any(marker in name for marker in fill_markers):
+            return [
+                ModelCapability.INPAINT,
+                ModelCapability.IMAGE_TO_IMAGE,
+            ]
+
+        #
+        # Normal diffusion models
+        #
+        return [
+            ModelCapability.TEXT_TO_IMAGE,
+        ]
 
 
 model_service = ModelService()

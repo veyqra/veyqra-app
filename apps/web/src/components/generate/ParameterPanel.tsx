@@ -86,14 +86,19 @@ export function ParameterPanel() {
 
       setCatalog(data);
 
-      if (
-        data.diffusionModels.length > 0 &&
-        !data.diffusionModels.some(
-          (model) => model.filename === modelId
-        )
-      ) {
-        setModelId(data.diffusionModels[0].filename);
-      }
+      const selectableModels =
+          data.diffusionModels.filter(
+            (model) => model.selectableForGenerate
+          );
+
+        if (
+          selectableModels.length > 0 &&
+          !selectableModels.some(
+            (model) => model.filename === modelId
+          )
+        ) {
+          setModelId(selectableModels[0].filename);
+        }
     } catch (loadError) {
       console.error(
         "Unable to load ComfyUI model catalog:",
@@ -106,9 +111,58 @@ export function ParameterPanel() {
     }
   }, [modelId, setModelId]);
 
-  useEffect(() => {
-    void loadCatalog();
-  }, [loadCatalog]);
+useEffect(() => {
+  let cancelled = false;
+
+  async function initializeCatalog() {
+    try {
+      const data = await getModelCatalog();
+
+      if (cancelled) {
+        return;
+      }
+
+      setCatalog(data);
+
+      const selectableModels =
+        data.diffusionModels.filter(
+          (model) => model.selectableForGenerate
+        );
+
+      if (
+        selectableModels.length > 0 &&
+        !selectableModels.some(
+          (model) => model.filename === modelId
+        )
+      ) {
+        setModelId(selectableModels[0].filename);
+      }
+    } catch (loadError) {
+      if (cancelled) {
+        return;
+      }
+
+      console.error(
+        "Unable to load ComfyUI model catalog:",
+        loadError
+      );
+
+      setError(
+        "Unable to load models from ComfyUI."
+      );
+    } finally {
+      if (!cancelled) {
+        setIsLoading(false);
+      }
+    }
+  }
+
+  void initializeCatalog();
+
+  return () => {
+    cancelled = true;
+  };
+}, [modelId, setModelId]);
 
   const selectedModel = useMemo(
     () =>
@@ -116,6 +170,14 @@ export function ParameterPanel() {
         (model) => model.filename === modelId
       ),
     [catalog.diffusionModels, modelId]
+  );
+  
+  const generateModels = useMemo(
+      () =>
+        catalog.diffusionModels.filter(
+          (model) => model.selectableForGenerate
+        ),
+      [catalog.diffusionModels]
   );
 
   const compatibleLoras = useMemo(
@@ -198,7 +260,7 @@ export function ParameterPanel() {
           }
           disabled={
             isLoading ||
-            catalog.diffusionModels.length === 0
+            generateModels.length === 0
           }
           className={inputClassName}
         >
@@ -209,13 +271,13 @@ export function ParameterPanel() {
           )}
 
           {!isLoading &&
-            catalog.diffusionModels.length === 0 && (
+            generateModels.length === 0 && (
               <option value="">
                 No models found
               </option>
             )}
 
-          {catalog.diffusionModels.map((model) => (
+          {generateModels.map((model) => (
             <option
               key={model.filename}
               value={model.filename}
