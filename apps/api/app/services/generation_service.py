@@ -31,6 +31,7 @@ class StoredGenerationJob:
     request: GenerateRequest
     comfy_prompt_id: str | None = None
     history_saved: bool = False
+    actual_seed: int | None = None
 
 
 class GenerationService:
@@ -62,10 +63,12 @@ class GenerationService:
         with self._lock:
             self._jobs[job_id] = stored_job
 
-        workflow = build_flux_workflow(request)
+        built = build_flux_workflow(request)
+
+        stored_job.actual_seed = built.seed
 
         prompt_id = await comfy_client.queue_prompt(
-            workflow=workflow,
+            workflow=built.workflow,
             client_id=job_id,
         )
 
@@ -224,7 +227,11 @@ class GenerationService:
                 image_url=image.image_url,
                 width=image.width,
                 height=image.height,
-                seed=stored_job.request.seed,
+                seed=(
+                    stored_job.actual_seed
+                    if stored_job.actual_seed is not None
+                    else stored_job.request.seed
+                ),
                 steps=stored_job.request.steps,
                 guidance=stored_job.request.guidance,
                 created_at=image.created_at,

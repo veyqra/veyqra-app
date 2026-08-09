@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from random import randrange
 from typing import Any
+from dataclasses import dataclass
 
 from app.schemas.generation import GenerateRequest
 
@@ -37,10 +38,14 @@ def load_flux_workflow_template() -> dict[str, Any]:
     ) as file:
         return json.load(file)
 
+@dataclass
+class BuiltWorkflow:
+    workflow: dict[str, Any]
+    seed: int
 
 def build_flux_workflow(
     request: GenerateRequest,
-) -> dict[str, Any]:
+) -> BuiltWorkflow:
 
     validate_flux_text_to_image_model(
         request.model_id
@@ -155,7 +160,10 @@ def build_flux_workflow(
         "Vyrra"
     )
 
-    return workflow
+    return BuiltWorkflow(
+        workflow=workflow,
+        seed=seed,
+        )
     
 def validate_flux_text_to_image_model(
     filename: str,

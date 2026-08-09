@@ -47,6 +47,17 @@ type GenerateStore = {
   clearQueue: () => void;
   resetSettings: () => void;
   getRequest: () => GenerateRequest;
+  applySettings: (settings: {
+      prompt: string;
+      negativePrompt: string;
+      modelId: string;
+      loraId: string;
+      loraStrength: number;
+      seed: number;
+      steps: number;
+      guidance: number;
+      resolutionId: string;
+  }) => void;
 };
 
 const initialSettings = {
@@ -116,6 +127,19 @@ export const useGenerateStore = create<GenerateStore>((set, get) => ({
       queue: get().queue,
       history: get().history,
     }),
+    
+  applySettings: (settings) =>
+    set({
+        prompt: settings.prompt,
+        negativePrompt: settings.negativePrompt,
+        modelId: settings.modelId,
+        loraId: settings.loraId,
+        loraStrength: settings.loraStrength,
+        seed: String(settings.seed),
+        steps: settings.steps,
+        guidance: settings.guidance,
+        resolutionId: settings.resolutionId,
+    }),  
 
   getRequest: () => {
     const state = get();
