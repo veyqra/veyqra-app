@@ -1,10 +1,6 @@
 import { create } from "zustand";
+import { resolutionPresets } from "@/lib/generation-presets";
 
-import {
-  generateLoras,
-  generateModels,
-  resolutionPresets,
-} from "@/lib/generate-demo-data";
 import type {
   GeneratedImage,
   GenerationJob,
@@ -56,8 +52,8 @@ type GenerateStore = {
 const initialSettings = {
   prompt: "",
   negativePrompt: "",
-  modelId: generateModels[0]?.id ?? "",
-  loraId: generateLoras[0]?.id ?? "",
+  modelId: "",
+  loraId: "none",
   loraStrength: 1,
   resolutionId: resolutionPresets[0]?.id ?? "",
   seed: "-1",

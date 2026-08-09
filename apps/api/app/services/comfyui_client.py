@@ -129,3 +129,24 @@ class ComfyUIClient:
             raise ComfyUIError(
                 f"Unable to load image from ComfyUI: {exc}"
             ) from exc
+            
+            
+    async def get_object_info(
+        self,
+        node_name: str | None = None,
+    ) -> dict[str, Any]:
+        url = f"{self.base_url}/object_info"
+
+        if node_name:
+            url = f"{url}/{node_name}"
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                return response.json()
+
+        except httpx.HTTPError as exc:
+            raise ComfyUIError(
+                f"Unable to read ComfyUI object info: {exc}"
+            ) from exc

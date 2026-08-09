@@ -6,6 +6,7 @@ from threading import Lock
 from typing import Any
 from uuid import uuid4
 from urllib.parse import urlencode
+from pathlib import PurePosixPath
 
 from app.core.config import get_settings
 from app.schemas.generation import (
@@ -17,9 +18,6 @@ from app.schemas.generation import (
 from app.services.comfyui_client import ComfyUIClient, ComfyUIError
 from app.services.workflow_builder import build_flux_workflow
 
-MODEL_NAMES: dict[str, str] = {
-    "flux-dev": "FLUX.1 Dev",
-}
 
 settings = get_settings()
 comfy_client = ComfyUIClient(settings.comfyui_url)
@@ -42,7 +40,7 @@ class GenerationService:
         request: GenerateRequest,
     ) -> GenerationJobResponse:
         job_id = str(uuid4())
-        model_name = MODEL_NAMES.get(request.model_id, request.model_id)
+        model_name = self._display_model_name(request.model_id)
 
         response = GenerationJobResponse(
             id=job_id,
@@ -249,6 +247,30 @@ class GenerationService:
         if resolution_id == "landscape":
             return 768
         return 1024
+        
+    def _display_model_name(
+        self,
+        filename: str,
+    ) -> str:
+        name = PurePosixPath(filename).name
+
+        for suffix in (
+            ".safetensors",
+            ".ckpt",
+            ".pt",
+            ".pth",
+            ".bin",
+        ):
+            if name.lower().endswith(suffix):
+                name = name[:-len(suffix)]
+                break
+
+        return (
+            name
+            .replace("_", " ")
+            .replace("-", " ")
+            .strip()
+        )
 
 
 generation_service = GenerationService()
