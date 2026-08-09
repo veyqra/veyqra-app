@@ -13,6 +13,7 @@ type ApiHistoryItem = {
   lora_id: string;
   lora_strength: number;
   image_url: string;
+  image_filename: string;
   width: number;
   height: number;
   seed: number;
@@ -38,6 +39,7 @@ function mapHistoryItem(
     loraId: item.lora_id,
     loraStrength: item.lora_strength,
     imageUrl: item.image_url,
+    imageFilename: item.image_filename,
     width: item.width,
     height: item.height,
     seed: item.seed,

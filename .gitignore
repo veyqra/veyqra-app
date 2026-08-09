@@ -3,6 +3,7 @@ node_modules/
 npm-debug.log*
 package-lock.json.bak
 apps/api/data/history.json
+apps/api/data/history-images/
 
 # Next.js
 .next/

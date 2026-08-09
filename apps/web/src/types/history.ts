@@ -7,6 +7,7 @@ export type HistoryItem = {
   loraId: string;
   loraStrength: number;
   imageUrl: string;
+  imageFilename: string;
   width: number;
   height: number;
   seed: number;

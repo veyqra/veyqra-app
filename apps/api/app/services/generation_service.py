@@ -2,13 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import PurePosixPath
 from threading import Lock
 from typing import Any
 from uuid import uuid4
-from urllib.parse import urlencode
-from pathlib import PurePosixPath
-from app.schemas.history import HistoryItemResponse
-from app.services.history_service import history_service
 
 from app.core.config import get_settings
 from app.schemas.generation import (
@@ -17,9 +14,11 @@ from app.schemas.generation import (
     GenerationJobResponse,
     GenerationStatus,
 )
-from app.services.comfyui_client import ComfyUIClient, ComfyUIError
+from app.schemas.history import HistoryItemResponse
+from app.services.comfyui_client import ComfyUIClient
+from app.services.history_service import history_service
+from app.services.storage_service import storage_service
 from app.services.workflow_builder import build_flux_workflow
-
 
 settings = get_settings()
 comfy_client = ComfyUIClient(settings.comfyui_url)
@@ -32,6 +31,7 @@ class StoredGenerationJob:
     comfy_prompt_id: str | None = None
     history_saved: bool = False
     actual_seed: int | None = None
+    stored_image: GeneratedImageResponse | None = None
 
 
 class GenerationService:
@@ -44,7 +44,10 @@ class GenerationService:
         request: GenerateRequest,
     ) -> GenerationJobResponse:
         job_id = str(uuid4())
-        model_name = self._display_model_name(request.model_id)
+
+        model_name = self._display_model_name(
+            request.model_id
+        )
 
         response = GenerationJobResponse(
             id=job_id,
@@ -109,14 +112,19 @@ class GenerationService:
             stored_job.comfy_prompt_id
         )
 
-        updated = self._apply_history_to_job(stored_job, history)
+        updated = await self._apply_history_to_job(
+            stored_job,
+            history,
+        )
 
         with self._lock:
             self._jobs[job_id] = stored_job
 
         return updated
 
-    async def list_jobs(self) -> list[GenerationJobResponse]:
+    async def list_jobs(
+        self,
+    ) -> list[GenerationJobResponse]:
         with self._lock:
             job_ids = list(self._jobs.keys())
 
@@ -150,15 +158,17 @@ class GenerationService:
             }:
                 return stored_job.response
 
-            stored_job.response = stored_job.response.model_copy(
-                update={
-                    "status": GenerationStatus.CANCELLED,
-                }
+            stored_job.response = (
+                stored_job.response.model_copy(
+                    update={
+                        "status": GenerationStatus.CANCELLED,
+                    }
+                )
             )
 
             return stored_job.response
 
-    def _apply_history_to_job(
+    async def _apply_history_to_job(
         self,
         stored_job: StoredGenerationJob,
         history: dict[str, Any],
@@ -175,73 +185,162 @@ class GenerationService:
             updated = current.model_copy(
                 update={
                     "status": GenerationStatus.RUNNING,
-                    "progress": max(current.progress, 35),
+                    "progress": max(
+                        current.progress,
+                        35,
+                    ),
                 }
             )
+
             stored_job.response = updated
             return updated
 
-        image_info = self._extract_first_image(history_entry)
+        #
+        # ComfyUI error handling
+        #
+        status_info = history_entry.get(
+            "status",
+            {},
+        )
+
+        if status_info.get("status_str") == "error":
+            messages = status_info.get(
+                "messages",
+                [],
+            )
+
+            error_message = (
+                "ComfyUI generation failed"
+            )
+
+            if messages:
+                error_message = str(
+                    messages[-1]
+                )
+
+            updated = current.model_copy(
+                update={
+                    "status": GenerationStatus.FAILED,
+                    "error": error_message,
+                }
+            )
+
+            stored_job.response = updated
+            return updated
+
+        image_info = self._extract_first_image(
+            history_entry
+        )
 
         if image_info is None:
             updated = current.model_copy(
                 update={
                     "status": GenerationStatus.RUNNING,
-                    "progress": max(current.progress, 80),
+                    "progress": max(
+                        current.progress,
+                        80,
+                    ),
                 }
             )
+
             stored_job.response = updated
             return updated
 
-        query = urlencode(
-            {
-                "filename": image_info["filename"],
-                "subfolder": image_info.get("subfolder", ""),
-                "type": image_info.get("type", "output"),
-            }
-        )
+        #
+        # Copy finished ComfyUI image into
+        # Vyrra-owned persistent storage.
+        #
+        if stored_job.stored_image is None:
+            stored_filename = (
+                await storage_service.store_comfyui_image(
+                    filename=image_info["filename"],
+                    subfolder=image_info.get(
+                        "subfolder",
+                        "",
+                    ),
+                    folder_type=image_info.get(
+                        "type",
+                        "output",
+                    ),
+                )
+            )
 
-        image_url = (
-            f"http://localhost:8000/api/v1/images/comfyui?{query}"
-        )
+            image_url = (
+                f"{settings.public_api_url}"
+                f"{settings.api_prefix}"
+                f"/storage/history/{stored_filename}"
+            )
 
-        image = GeneratedImageResponse(
-            id=str(uuid4()),
-            prompt=current.prompt,
-            image_url=image_url,
-            model_name=current.model_name,
-            width=self._get_width(stored_job.request.resolution_id),
-            height=self._get_height(stored_job.request.resolution_id),
-            created_at=datetime.now(UTC),
-        )
-        
-        if not stored_job.history_saved:
-            history_item = HistoryItemResponse(
-                id=image.id,
-                prompt=stored_job.request.prompt,
-                negative_prompt=stored_job.request.negative_prompt,
-                model_id=stored_job.request.model_id,
+            image = GeneratedImageResponse(
+                id=str(uuid4()),
+                prompt=current.prompt,
+                image_url=image_url,
                 model_name=current.model_name,
-                lora_id=stored_job.request.lora_id,
-                lora_strength=stored_job.request.lora_strength,
-                image_url=image.image_url,
-                width=image.width,
-                height=image.height,
-                seed=(
-                    stored_job.actual_seed
-                    if stored_job.actual_seed is not None
-                    else stored_job.request.seed
+                width=self._get_width(
+                    stored_job.request.resolution_id
                 ),
-                steps=stored_job.request.steps,
-                guidance=stored_job.request.guidance,
-                created_at=image.created_at,
+                height=self._get_height(
+                    stored_job.request.resolution_id
+                ),
+                created_at=datetime.now(UTC),
             )
 
-            history_service.add_item(
-            history_item
+            stored_job.stored_image = image
+
+            #
+            # Persist metadata once.
+            #
+            if not stored_job.history_saved:
+                history_item = HistoryItemResponse(
+                    id=image.id,
+                    prompt=stored_job.request.prompt,
+                    negative_prompt=(
+                        stored_job.request.negative_prompt
+                    ),
+                    model_id=stored_job.request.model_id,
+                    model_name=current.model_name,
+                    lora_id=stored_job.request.lora_id,
+                    lora_strength=(
+                        stored_job.request.lora_strength
+                    ),
+                    image_filename=stored_filename,
+                    image_url=image.image_url,
+                    width=image.width,
+                    height=image.height,
+                    seed=(
+                        stored_job.actual_seed
+                        if stored_job.actual_seed
+                        is not None
+                        else stored_job.request.seed
+                    ),
+                    steps=stored_job.request.steps,
+                    guidance=(
+                        stored_job.request.guidance
+                    ),
+                    created_at=image.created_at,
+                )
+
+                history_service.add_item(
+                    history_item
+                )
+
+                stored_job.history_saved = True
+
+        image = stored_job.stored_image
+
+        if image is None:
+            updated = current.model_copy(
+                update={
+                    "status": GenerationStatus.FAILED,
+                    "error": (
+                        "Generated image could not "
+                        "be stored by Vyrra."
+                    ),
+                }
             )
-            
-            stored_job.history_saved = True
+
+            stored_job.response = updated
+            return updated
 
         updated = current.model_copy(
             update={
@@ -252,41 +351,59 @@ class GenerationService:
         )
 
         stored_job.response = updated
+
         return updated
 
     def _extract_first_image(
         self,
         history_entry: dict[str, Any],
     ) -> dict[str, Any] | None:
-        outputs = history_entry.get("outputs", {})
+        outputs = history_entry.get(
+            "outputs",
+            {},
+        )
 
         for node_output in outputs.values():
-            images = node_output.get("images")
+            images = node_output.get(
+                "images"
+            )
 
             if images:
                 return images[0]
 
         return None
 
-    def _get_width(self, resolution_id: str) -> int:
+    def _get_width(
+        self,
+        resolution_id: str,
+    ) -> int:
         if resolution_id == "portrait":
             return 768
+
         if resolution_id == "landscape":
             return 1152
+
         return 1024
 
-    def _get_height(self, resolution_id: str) -> int:
+    def _get_height(
+        self,
+        resolution_id: str,
+    ) -> int:
         if resolution_id == "portrait":
             return 1152
+
         if resolution_id == "landscape":
             return 768
+
         return 1024
-        
+
     def _display_model_name(
         self,
         filename: str,
     ) -> str:
-        name = PurePosixPath(filename).name
+        name = PurePosixPath(
+            filename
+        ).name
 
         for suffix in (
             ".safetensors",
@@ -295,8 +412,13 @@ class GenerationService:
             ".pth",
             ".bin",
         ):
-            if name.lower().endswith(suffix):
-                name = name[:-len(suffix)]
+            if name.lower().endswith(
+                suffix
+            ):
+                name = name[
+                    :-len(suffix)
+                ]
+
                 break
 
         return (

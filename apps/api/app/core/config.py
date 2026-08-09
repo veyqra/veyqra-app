@@ -9,12 +9,29 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     api_prefix: str = "/api/v1"
 
-    host: str = Field(default="0.0.0.0", alias="VYRRA_API_HOST")
-    port: int = Field(default=8000, alias="VYRRA_API_PORT")
+    host: str = Field(
+        default="0.0.0.0",
+        alias="VYRRA_API_HOST",
+    )
+
+    port: int = Field(
+        default=8000,
+        alias="VYRRA_API_PORT",
+    )
 
     cors_origins_raw: str = Field(
         default="http://localhost:3000,http://127.0.0.1:3000",
         alias="VYRRA_CORS_ORIGINS",
+    )
+
+    comfyui_url: str = Field(
+        default="http://127.0.0.1:8188",
+        alias="VYRRA_COMFYUI_URL",
+    )
+
+    public_api_url: str = Field(
+        default="http://localhost:8000",
+        alias="VYRRA_PUBLIC_API_URL",
     )
 
     model_config = SettingsConfigDict(
@@ -22,11 +39,6 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         populate_by_name=True,
-    )
-    
-    comfyui_url: str = Field(
-        default="http://127.0.0.1:8188",
-        alias="VYRRA_COMFYUI_URL",
     )
 
     @property

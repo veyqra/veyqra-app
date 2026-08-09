@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from threading import Lock
 from typing import Any
+from app.services.storage_service import storage_service
 
 from app.schemas.history import (
     HistoryItemResponse,
@@ -78,22 +79,44 @@ class HistoryService:
         with self._lock:
             items = self._read_items_unlocked()
 
+            target = next(
+                (
+                    item
+                    for item in items
+                    if item.get("id") == item_id
+                ),
+                None,
+            )
+
+            if target is None:
+                return False
+
             filtered = [
                 item
                 for item in items
                 if item.get("id") != item_id
             ]
 
-            if len(filtered) == len(items):
-                return False
+            self._write_items_unlocked(
+                filtered
+            )
 
-            self._write_items_unlocked(filtered)
+        image_filename = target.get(
+            "image_filename"
+        )
+
+        if image_filename:
+            storage_service.delete_image(
+                image_filename
+            )
 
         return True
 
     def clear(self) -> None:
         with self._lock:
             self._write_items_unlocked([])
+
+        storage_service.clear_images()
 
     def _read_items(self) -> list[dict[str, Any]]:
         with self._lock:

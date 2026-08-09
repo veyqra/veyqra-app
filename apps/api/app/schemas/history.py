@@ -11,6 +11,8 @@ class HistoryItemResponse(BaseModel):
     model_name: str
     lora_id: str
     lora_strength: float
+    image_filename: str | None = None
+    image_url: str
     image_url: str
     width: int
     height: int
