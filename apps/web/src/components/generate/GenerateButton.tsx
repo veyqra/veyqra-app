@@ -10,7 +10,7 @@ import { useGenerateStore } from "@/stores/generate-store";
 import type { GenerationJob } from "@/types/generate";
 
 const POLL_INTERVAL_MS = 500;
-const POLL_TIMEOUT_MS = 60_000;
+const POLL_TIMEOUT_MS = 15 * 60_000;
 
 export function GenerateButton() {
   const prompt = useGenerateStore((state) => state.prompt);

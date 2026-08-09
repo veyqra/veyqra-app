@@ -5,6 +5,7 @@ from app.schemas.generation import (
     GenerationCreatedResponse,
     GenerationJobResponse,
 )
+from app.services.comfyui_client import ComfyUIError
 from app.services.generation_service import generation_service
 
 router = APIRouter(prefix="/generations", tags=["Generations"])
@@ -18,7 +19,18 @@ router = APIRouter(prefix="/generations", tags=["Generations"])
 async def create_generation(
     request: GenerateRequest,
 ) -> GenerationCreatedResponse:
-    job = generation_service.create_job(request)
+    try:
+        job = await generation_service.create_job(request)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except ComfyUIError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
     return GenerationCreatedResponse(job=job)
 
@@ -28,7 +40,13 @@ async def create_generation(
     response_model=list[GenerationJobResponse],
 )
 async def list_generations() -> list[GenerationJobResponse]:
-    return generation_service.list_jobs()
+    try:
+        return await generation_service.list_jobs()
+    except ComfyUIError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get(
@@ -36,7 +54,13 @@ async def list_generations() -> list[GenerationJobResponse]:
     response_model=GenerationJobResponse,
 )
 async def get_generation(job_id: str) -> GenerationJobResponse:
-    job = generation_service.get_job(job_id)
+    try:
+        job = await generation_service.get_job(job_id)
+    except ComfyUIError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
     if job is None:
         raise HTTPException(
@@ -52,7 +76,7 @@ async def get_generation(job_id: str) -> GenerationJobResponse:
     response_model=GenerationJobResponse,
 )
 async def cancel_generation(job_id: str) -> GenerationJobResponse:
-    job = generation_service.cancel_job(job_id)
+    job = await generation_service.cancel_job(job_id)
 
     if job is None:
         raise HTTPException(
@@ -68,5 +92,4 @@ async def cancel_generation(job_id: str) -> GenerationJobResponse:
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def clear_generations() -> Response:
-    # Persistent queue clearing follows in a later commit.
     return Response(status_code=status.HTTP_204_NO_CONTENT)

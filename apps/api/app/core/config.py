@@ -23,6 +23,11 @@ class Settings(BaseSettings):
         extra="ignore",
         populate_by_name=True,
     )
+    
+    comfyui_url: str = Field(
+        default="http://127.0.0.1:8188",
+        alias="VYRRA_COMFYUI_URL",
+    )
 
     @property
     def cors_origins(self) -> list[str]:

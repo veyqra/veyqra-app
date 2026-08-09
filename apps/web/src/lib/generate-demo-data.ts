@@ -11,12 +11,6 @@ export const generateModels: GenerateModel[] = [
     family: "flux",
     filename: "flux1-dev.safetensors",
   },
-  {
-    id: "juggernaut-xl",
-    name: "Juggernaut XL",
-    family: "sdxl",
-    filename: "juggernautXL_v9.safetensors",
-  },
 ];
 
 export const generateLoras: GenerateLora[] = [
