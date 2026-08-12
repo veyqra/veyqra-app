@@ -19,6 +19,8 @@ from app.services.comfyui_client import ComfyUIClient
 from app.services.history_service import history_service
 from app.services.storage_service import storage_service
 from app.services.workflow_builder import build_flux_workflow
+from app.schemas.job import PersistedGenerationJob
+from app.services.job_store import job_store
 
 settings = get_settings()
 comfy_client = ComfyUIClient(settings.comfyui_url)
@@ -38,6 +40,11 @@ class GenerationService:
     def __init__(self) -> None:
         self._jobs: dict[str, StoredGenerationJob] = {}
         self._lock = Lock()
+
+        for persisted in job_store.list_jobs():
+            self._jobs[persisted.id] = (
+                self._restore_job(persisted)
+            )
 
     async def create_job(
         self,
@@ -64,11 +71,21 @@ class GenerationService:
         )
 
         with self._lock:
-            self._jobs[job_id] = stored_job
+            self._jobs[job_id] = stored_job    
+            
+        self._persist_job(
+            job_id,
+            stored_job,
+        )
 
         built = build_flux_workflow(request)
 
         stored_job.actual_seed = built.seed
+        
+        self._persist_job(
+            job_id,
+            stored_job,
+        )
 
         prompt_id = await comfy_client.queue_prompt(
             workflow=built.workflow,
@@ -85,6 +102,11 @@ class GenerationService:
         with self._lock:
             stored_job.comfy_prompt_id = prompt_id
             stored_job.response = updated_response
+            
+        self._persist_job(
+            job_id,
+            stored_job,
+        )
 
         return updated_response
 
@@ -96,7 +118,19 @@ class GenerationService:
             stored_job = self._jobs.get(job_id)
 
         if stored_job is None:
-            return None
+            persisted = job_store.get_job(
+                job_id
+            )
+
+            if persisted is None:
+                return None
+
+            stored_job = self._restore_job(
+                persisted
+            )
+
+            with self._lock:
+                self._jobs[job_id] = stored_job
 
         if stored_job.response.status in {
             GenerationStatus.COMPLETED,
@@ -119,6 +153,11 @@ class GenerationService:
 
         with self._lock:
             self._jobs[job_id] = stored_job
+
+        self._persist_job(
+            job_id,
+            stored_job,
+        )
 
         return updated
 
@@ -149,24 +188,45 @@ class GenerationService:
         with self._lock:
             stored_job = self._jobs.get(job_id)
 
-            if stored_job is None:
-                return None
-
-            if stored_job.response.status in {
-                GenerationStatus.COMPLETED,
-                GenerationStatus.FAILED,
-            }:
-                return stored_job.response
-
-            stored_job.response = (
-                stored_job.response.model_copy(
-                    update={
-                        "status": GenerationStatus.CANCELLED,
-                    }
-                )
+        if stored_job is None:
+            persisted = job_store.get_job(
+                job_id
             )
 
+            if persisted is None:
+                return None
+
+            stored_job = self._restore_job(
+                persisted
+            )
+
+            with self._lock:
+                self._jobs[job_id] = stored_job
+
+        if stored_job.response.status in {
+            GenerationStatus.COMPLETED,
+            GenerationStatus.FAILED,
+            GenerationStatus.CANCELLED,
+        }:
             return stored_job.response
+
+        stored_job.response = (
+            stored_job.response.model_copy(
+                update={
+                    "status": GenerationStatus.CANCELLED,
+                }
+            )
+        )
+
+        with self._lock:
+            self._jobs[job_id] = stored_job
+
+        self._persist_job(
+            job_id,
+            stored_job,
+        )
+
+        return stored_job.response
 
     async def _apply_history_to_job(
         self,
@@ -396,6 +456,54 @@ class GenerationService:
             return 768
 
         return 1024
+
+    def _persist_job(
+        self,
+        job_id: str,
+        stored_job: StoredGenerationJob,
+    ) -> None:
+        response = stored_job.response
+
+        persisted = PersistedGenerationJob(
+            id=job_id,
+            request=stored_job.request,
+            status=response.status,
+            progress=response.progress,
+            model_name=response.model_name,
+            created_at=response.created_at,
+            comfy_prompt_id=stored_job.comfy_prompt_id,
+            actual_seed=stored_job.actual_seed,
+            history_saved=stored_job.history_saved,
+            image=response.image,
+            error=response.error,
+        )
+
+        job_store.save_job(persisted)
+        
+        
+    def _restore_job(
+        self,
+        persisted: PersistedGenerationJob,
+    ) -> StoredGenerationJob:
+        response = GenerationJobResponse(
+            id=persisted.id,
+            prompt=persisted.request.prompt,
+            model_name=persisted.model_name,
+            status=persisted.status,
+            progress=persisted.progress,
+            created_at=persisted.created_at,
+            image=persisted.image,
+            error=persisted.error,
+        )
+
+        return StoredGenerationJob(
+            response=response,
+            request=persisted.request,
+            comfy_prompt_id=persisted.comfy_prompt_id,
+            history_saved=persisted.history_saved,
+            actual_seed=persisted.actual_seed,
+            stored_image=persisted.image,
+        )
 
     def _display_model_name(
         self,

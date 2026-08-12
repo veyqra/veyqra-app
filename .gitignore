@@ -4,6 +4,7 @@ npm-debug.log*
 package-lock.json.bak
 apps/api/data/history.json
 apps/api/data/history-images/
+apps/api/data/jobs.json
 
 # Next.js
 .next/
