@@ -4,13 +4,16 @@ from app.schemas.dashboard import (
     DashboardSystemResponse,
 )
 from app.schemas.generation import GenerationStatus
+from app.core.config import get_settings
 from app.services.comfyui_client import (
+    ComfyUIClient,
     ComfyUIError,
-    comfy_client,
 )
 from app.services.generation_service import generation_service
 from app.services.model_service import model_service
 
+settings = get_settings()
+comfy_client = ComfyUIClient(settings.comfyui_url)
 
 class DashboardService:
     async def get_dashboard(

@@ -3,6 +3,7 @@
 import { LoaderCircle, Play } from "lucide-react";
 
 import {
+  cancelGeneration,
   createGeneration,
   getGeneration,
 } from "@/services/generation-api";
@@ -29,9 +30,21 @@ export function GenerateButton() {
   const addHistoryImage = useGenerateStore(
     (state) => state.addHistoryImage
   );
+  const setGenerationError = useGenerateStore(  (state) => state.setGenerationError);
   const getRequest = useGenerateStore((state) => state.getRequest);
+  const queue = useGenerateStore((state) => state.queue);
+  const currentJob = queue.find(
+    (job) => job.status === "queued" || job.status === "running"
+  );
+  const statusLabel =
+    currentJob?.status === "queued"
+      ? "Queued..."
+      : currentJob?.status === "running"
+      ? `Generating ${currentJob.progress ?? 0}%`
+      : "Generate";
 
   async function handleGenerate() {
+    setGenerationError(null);
     if (!prompt.trim() || isGenerating) {
       return;
     }
@@ -53,41 +66,84 @@ export function GenerateButton() {
         finishedJob.status === "completed" &&
         finishedJob.image
       ) {
+        setGenerationError(null);
         addHistoryImage(finishedJob.image);
         setPreviewImageUrl(finishedJob.image.imageUrl);
       }
 
       if (finishedJob.status === "failed") {
-        console.error(
-          finishedJob.error ?? "Generation failed"
-        );
+        const message =
+          finishedJob.error ??
+          "Generation failed.";
+        setGenerationError(message);
+        console.error(message);
       }
     } catch (error) {
-      console.error("Unable to generate image:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Generation failed.";
+      setGenerationError(message);
+      console.error(
+        "Unable to generate image:",
+        error
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (!currentJob) {
+      return;
+    }
+
+    try {
+      const cancelledJob = await cancelGeneration(currentJob.id);
+      updateJob(cancelledJob.id, cancelledJob);
+      setGenerationError(null);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to cancel generation.";
+      setGenerationError(message);
+      console.error("Unable to cancel generation:", error);
     } finally {
       setIsGenerating(false);
     }
   }
 
   return (
-    <button
-      type="button"
-      disabled={!prompt.trim() || isGenerating}
-      onClick={handleGenerate}
-      className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-4 font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {isGenerating ? (
-        <>
-          <LoaderCircle className="h-5 w-5 animate-spin" />
-          Generating
-        </>
-      ) : (
-        <>
-          <Play className="h-5 w-5" />
-          Generate image
-        </>
+    <div className="space-y-2">
+      <button
+        type="button"
+        disabled={!prompt.trim() || isGenerating}
+        onClick={handleGenerate}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-4 font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isGenerating ? (
+          <>
+            <LoaderCircle className="h-5 w-5 animate-spin" />
+            {statusLabel}
+          </>
+        ) : (
+          <>
+            <Play className="h-5 w-5" />
+            Generate
+          </>
+        )}
+      </button>
+      {isGenerating && currentJob && (
+        <button
+          type="button"
+          onClick={() => void handleCancel()}
+          className="w-full rounded-xl border border-red-900/60 bg-red-950/20 px-5 py-3 text-sm font-medium text-red-300 transition hover:bg-red-950/40"
+        >
+          Cancel generation
+        </button>
       )}
-    </button>
+    </div>
   );
 }
 

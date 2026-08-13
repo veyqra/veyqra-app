@@ -7,10 +7,13 @@ import {
   useState,
 } from "react";
 import {
+  Dice5,
   LoaderCircle,
+  Lock,
   RefreshCw,
   RotateCcw,
   SlidersHorizontal,
+  Unlock,
 } from "lucide-react";
 
 import { resolutionPresets } from "@/lib/generation-presets";
@@ -42,6 +45,7 @@ export function ParameterPanel() {
   const steps = useGenerateStore((state) => state.steps);
   const guidance = useGenerateStore((state) => state.guidance);
   const batchSize = useGenerateStore((state) => state.batchSize);
+  const seedLocked = useGenerateStore((state) => state.seedLocked);
 
   const setModelId = useGenerateStore(
     (state) => state.setModelId
@@ -57,6 +61,13 @@ export function ParameterPanel() {
   );
   const setSeed = useGenerateStore(
     (state) => state.setSeed
+  );
+  const setSeedLocked = useGenerateStore(
+  (state) => state.setSeedLocked
+  );
+
+  const randomizeSeed = useGenerateStore(
+  (state) => state.randomizeSeed
   );
   const setSteps = useGenerateStore(
     (state) => state.setSteps
@@ -170,6 +181,11 @@ useEffect(() => {
         (model) => model.filename === modelId
       ),
     [catalog.diffusionModels, modelId]
+  );
+  const selectedLora = useMemo(
+    () =>
+      catalog.loras.find((lora) => lora.filename === loraId),
+    [catalog.loras, loraId]
   );
   
   const generateModels = useMemo(
@@ -289,23 +305,34 @@ useEffect(() => {
       </label>
 
       {selectedModel && (
-        <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-          <div className="min-w-0">
-            <p className="text-xs text-zinc-500">
-              Selected model
-            </p>
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-zinc-500">Selected model</p>
 
-            <p
-              className="truncate font-mono text-xs text-zinc-300"
-              title={selectedModel.filename}
-            >
-              {selectedModel.filename}
-            </p>
+              <p
+                className="mt-1 truncate font-mono text-xs text-zinc-300"
+                title={selectedModel.filename}
+              >
+                {selectedModel.filename}
+              </p>
+            </div>
+
+            <span className="shrink-0 rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-300">
+              {familyName(selectedModel.family)}
+            </span>
           </div>
 
-          <span className="ml-3 rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-300">
-            {familyName(selectedModel.family)}
-          </span>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {selectedModel.capabilities.map((capability) => (
+              <span
+                key={capability}
+                className="rounded-md bg-zinc-900 px-2 py-1 text-[11px] text-zinc-400"
+              >
+                {capabilityName(capability)}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
@@ -348,14 +375,16 @@ useEffect(() => {
         )}
 
       {loraId !== "none" && (
-        <label className="block text-sm font-medium text-zinc-300">
-          <span className="flex justify-between">
-            <span>LoRA strength</span>
-
-            <span className="text-zinc-500">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-zinc-300">LoRA strength</p>
+              <p className="mt-1 text-xs text-zinc-600">Controls how strongly the LoRA influences the model.</p>
+            </div>
+            <span className="rounded-lg bg-zinc-900 px-2.5 py-1 font-mono text-xs text-violet-300">
               {loraStrength.toFixed(2)}
             </span>
-          </span>
+          </div>
 
           <input
             type="range"
@@ -363,14 +392,32 @@ useEffect(() => {
             max="2"
             step="0.05"
             value={loraStrength}
-            onChange={(event) =>
-              setLoraStrength(
-                Number(event.target.value)
-              )
-            }
-            className="mt-3 w-full accent-violet-600"
+            onChange={(event) => setLoraStrength(Number(event.target.value))}
+            className="mt-4 w-full accent-violet-600"
           />
-        </label>
+
+          <div className="mt-1 flex justify-between text-[10px] text-zinc-700">
+            <span>0</span>
+            <span>1</span>
+            <span>2</span>
+          </div>
+        </div>
+      )}
+
+      {selectedLora && (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 mt-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-zinc-500">Active LoRA</p>
+              <p className="mt-1 truncate font-mono text-xs text-zinc-300" title={selectedLora.filename}>
+                {selectedLora.filename}
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-violet-500/10 px-2.5 py-1 text-xs text-violet-300">
+              {familyName(selectedLora.family)}
+            </span>
+          </div>
+        </div>
       )}
 
       <label className="block text-sm font-medium text-zinc-300">
@@ -412,18 +459,84 @@ useEffect(() => {
           onChange={setGuidance}
         />
 
-        <label className="block text-sm font-medium text-zinc-300">
-          Seed
+        <div className="block text-sm font-medium text-zinc-300">
+          <div className="flex items-center justify-between">
+            <span>Seed</span>
 
-          <input
-            value={seed}
-            onChange={(event) =>
-              setSeed(event.target.value)
-            }
-            inputMode="numeric"
-            className={inputClassName}
-          />
-        </label>
+             <span className="text-xs font-normal text-zinc-500">
+              {seed === "-1"
+               ? "Random"
+               : seedLocked
+               ? "Locked"
+               : "Fixed"}
+             </span>
+          </div>
+
+          <div className="mt-2 flex gap-2">
+            <input
+              value={seed}
+                onChange={(event) =>
+                  setSeed(event.target.value)
+                 }
+                 disabled={seedLocked}
+                 inputMode="numeric"
+                 className="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 font-mono text-sm text-white outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+
+            <button
+              type="button"
+              onClick={randomizeSeed}
+              disabled={seedLocked}
+              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-zinc-400 transition hover:border-violet-500 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-40"
+              title="Generate random seed"
+            >
+              <Dice5 className="h-4 w-4" />
+            </button>
+
+    <button
+      type="button"
+      onClick={() =>
+        setSeedLocked(!seedLocked)
+      }
+      className={`rounded-xl border px-3 transition ${
+        seedLocked
+          ? "border-violet-500 bg-violet-500/10 text-violet-300"
+          : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-violet-500 hover:text-violet-300"
+      }`}
+      title={
+        seedLocked
+          ? "Unlock seed"
+          : "Lock seed"
+      }
+    >
+      {seedLocked ? (
+        <Lock className="h-4 w-4" />
+      ) : (
+        <Unlock className="h-4 w-4" />
+      )}
+    </button>
+  </div>
+
+  <div className="mt-2 flex items-center justify-between text-xs font-normal text-zinc-600">
+    <button
+      type="button"
+      onClick={() => setSeed("-1")}
+      disabled={seedLocked}
+      className="transition hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Use random seed
+    </button>
+
+    {seed !== "-1" && (
+      <span
+        className="max-w-[150px] truncate font-mono"
+        title={seed}
+      >
+        {seed}
+      </span>
+    )}
+  </div>
+</div> 
 
         <NumberField
           label="Batch size"
@@ -432,6 +545,21 @@ useEffect(() => {
           max={8}
           onChange={setBatchSize}
         />
+      </div>
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+        <p className="text-xs uppercase tracking-wide text-zinc-600">Generation summary</p>
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <SummaryItem label="Model" value={selectedModel?.name ?? "None"} />
+          <SummaryItem label="LoRA" value={selectedLora?.name ?? "None"} />
+          <SummaryItem
+            label="Resolution"
+            value={
+              resolutionPresets.find((item) => item.id === resolutionId)?.label ?? resolutionId
+            }
+          />
+          <SummaryItem label="Seed" value={seed === "-1" ? "Random" : seed} />
+        </div>
       </div>
 
       {isLoading && (
@@ -515,4 +643,36 @@ function familyName(
     default:
       return "Unknown";
   }
+}
+
+function capabilityName(
+  capability: ModelItem["capabilities"][number]
+): string {
+  switch (capability) {
+    case "text_to_image":
+      return "Text → Image";
+    case "image_to_image":
+      return "Image → Image";
+    case "inpaint":
+      return "Inpaint";
+    default:
+      return capability;
+  }
+}
+
+function SummaryItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-zinc-600">{label}</p>
+      <p className="mt-1 truncate text-zinc-300" title={value}>
+        {value}
+      </p>
+    </div>
+  );
 }

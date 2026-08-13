@@ -15,11 +15,13 @@ type GenerateStore = {
   loraStrength: number;
   resolutionId: string;
   seed: string;
+  seedLocked: boolean;
   steps: number;
   guidance: number;
   batchSize: number;
   inputImageUrl: string | null;
   previewImageUrl: string | null;
+  generationError: string | null;
   isGenerating: boolean;
   queue: GenerationJob[];
   history: GeneratedImage[];
@@ -31,11 +33,14 @@ type GenerateStore = {
   setLoraStrength: (value: number) => void;
   setResolutionId: (value: string) => void;
   setSeed: (value: string) => void;
+  setSeedLocked: (value: boolean) => void;
+  randomizeSeed: () => void;
   setSteps: (value: number) => void;
   setGuidance: (value: number) => void;
   setBatchSize: (value: number) => void;
   setInputImageUrl: (value: string | null) => void;
   setPreviewImageUrl: (value: string | null) => void;
+  setGenerationError: (  value: string | null) => void;
   setIsGenerating: (value: boolean) => void;
   addJob: (job: GenerationJob) => void;
   updateJob: (
@@ -68,11 +73,13 @@ const initialSettings = {
   loraStrength: 1,
   resolutionId: resolutionPresets[0]?.id ?? "",
   seed: "-1",
+  seedLocked: false,
   steps: 28,
   guidance: 3.5,
   batchSize: 1,
   inputImageUrl: null,
   previewImageUrl: null,
+  generationError: null,
   isGenerating: false,
 };
 
@@ -89,12 +96,24 @@ export const useGenerateStore = create<GenerateStore>((set, get) => ({
   setLoraStrength: (loraStrength) => set({ loraStrength }),
   setResolutionId: (resolutionId) => set({ resolutionId }),
   setSeed: (seed) => set({ seed }),
+  setSeedLocked: (seedLocked) =>
+  set({ seedLocked }),
+
+  randomizeSeed: () =>
+  set({
+    seed: String(
+      Math.floor(
+        Math.random() * Number.MAX_SAFE_INTEGER
+      )
+    ),
+  }),
   setSteps: (steps) => set({ steps }),
   setGuidance: (guidance) => set({ guidance }),
   setBatchSize: (batchSize) => set({ batchSize }),
   setInputImageUrl: (inputImageUrl) => set({ inputImageUrl }),
   setPreviewImageUrl: (previewImageUrl) =>
     set({ previewImageUrl }),
+  setGenerationError: (generationError) =>  set({ generationError }),
   setIsGenerating: (isGenerating) => set({ isGenerating }),
 
   addJob: (job) =>
