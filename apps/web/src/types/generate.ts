@@ -32,11 +32,16 @@ export type GenerationJob = {
   id: string;
   prompt: string;
   modelName: string;
-  status: GenerationStatus;
+  status:
+    | "queued"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled";
   progress: number;
   createdAt: string;
-  error?: string;
-  image?: GeneratedImage;
+  error?: string | null;
+  image?: GeneratedImage | null;
 };
 
 export type GeneratedImage = {

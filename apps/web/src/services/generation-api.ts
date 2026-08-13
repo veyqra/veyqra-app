@@ -120,3 +120,11 @@ export async function cancelGeneration(
 
   return toGenerationJob(response);
 }
+
+export async function listGenerations(): Promise<GenerationJob[]> {
+  const response = await apiRequest<ApiGenerationJob[]>(
+    "/generations"
+  );
+
+  return response.map(toGenerationJob);
+}

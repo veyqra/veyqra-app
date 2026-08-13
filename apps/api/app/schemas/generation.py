@@ -60,3 +60,4 @@ class GenerationJobResponse(BaseModel):
 
 class GenerationCreatedResponse(BaseModel):
     job: GenerationJobResponse
+    

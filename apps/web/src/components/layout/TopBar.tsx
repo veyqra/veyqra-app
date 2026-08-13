@@ -31,6 +31,10 @@ const routeInfo = {
     title: "History",
     subtitle: "Browse previous generations",
   },
+  "/jobs": {
+    title: "Jobs",
+    subtitle: "Monitor generation jobs",
+  },
   "/cloud": {
     title: "Cloud",
     subtitle: "Manage cloud compute",

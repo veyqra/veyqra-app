@@ -1,18 +1,29 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function Logo() {
   return (
-    <Link href="/dashboard" className="flex items-center gap-4">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-600 text-xl font-black shadow-lg shadow-violet-600/30">
-        V
-      </div>
+    <Link
+      href="/dashboard"
+      className="flex items-center gap-2.5"
+    >
+      <Image
+        src="/vyrra-logo.png"
+        alt="Vyrra"
+        width={48}
+        height={48}
+        priority
+        className="h-12 w-12 rounded-xl object-contain"
+      />
 
-      <div>
-        <h1 className="text-xl font-bold">Vyrra</h1>
+      <div className="min-w-0">
+        <div className="text-base font-semibold tracking-tight text-white">
+          Vyrra
+        </div>
 
-        <p className="text-xs text-zinc-400">
+        <div className="text-[11px] text-zinc-400">
           Create. Train. Deploy.
-        </p>
+        </div>
       </div>
     </Link>
   );

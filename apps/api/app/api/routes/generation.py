@@ -92,4 +92,8 @@ async def cancel_generation(job_id: str) -> GenerationJobResponse:
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def clear_generations() -> Response:
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    generation_service.clear_jobs()
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT
+    )

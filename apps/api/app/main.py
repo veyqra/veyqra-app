@@ -9,13 +9,37 @@ from app.api.routes.images import router as images_router
 from app.api.routes.models import router as models_router
 from app.api.routes.history import router as history_router
 from app.api.routes.storage import router as storage_router
+import asyncio
+
+from contextlib import asynccontextmanager
+
+from app.services.generation_service import (
+    generation_service,
+)
 
 settings = get_settings()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    recovery_task = asyncio.create_task(
+        generation_service.resume_pending_jobs()
+    )
+
+    try:
+        yield
+    finally:
+        recovery_task.cancel()
+
+        try:
+            await recovery_task
+        except asyncio.CancelledError:
+            pass
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="Backend API for the Vyrra AI workstation.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

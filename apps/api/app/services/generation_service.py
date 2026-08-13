@@ -6,6 +6,7 @@ from pathlib import PurePosixPath
 from threading import Lock
 from typing import Any
 from uuid import uuid4
+import asyncio
 
 from app.core.config import get_settings
 from app.schemas.generation import (
@@ -45,6 +46,32 @@ class GenerationService:
             self._jobs[persisted.id] = (
                 self._restore_job(persisted)
             )
+
+    async def resume_pending_jobs(self) -> None:
+        while True:
+            with self._lock:
+                job_ids = [
+                    job_id
+                    for job_id, stored_job in self._jobs.items()
+                    if stored_job.response.status
+                    not in {
+                        GenerationStatus.COMPLETED,
+                        GenerationStatus.FAILED,
+                        GenerationStatus.CANCELLED,
+                    }
+                ]
+
+            for job_id in job_ids:
+                try:
+                    await self.get_job(job_id)
+                except Exception as error:
+                    print(
+                        f"Unable to resume generation job "
+                        f"{job_id}: {error}"
+                    )
+
+            await asyncio.sleep(5)
+
 
     async def create_job(
         self,
@@ -479,7 +506,12 @@ class GenerationService:
         )
 
         job_store.save_job(persisted)
-        
+     
+    def clear_jobs(self) -> None:
+        with self._lock:
+            self._jobs.clear()
+
+        job_store.clear()     
         
     def _restore_job(
         self,

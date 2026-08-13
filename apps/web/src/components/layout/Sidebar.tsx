@@ -8,6 +8,7 @@ import {
   BrainCircuit,
   Boxes,
   History,
+  ListTodo,
   Cloud,
   Store,
   Settings,
@@ -25,6 +26,11 @@ const navigation = [
     title: "Generate",
     href: "/generate",
     icon: ImagePlus,
+  },
+  {
+    title: "Jobs",
+    href: "/jobs",
+    icon: ListTodo,
   },
   {
     title: "Train",
@@ -65,7 +71,7 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-72 flex-col border-r border-zinc-800 bg-zinc-950">
       {/* Logo */}
-      <div className="border-b border-zinc-800 px-6 py-6">
+      <div className="border-b border-zinc-800 px-5 py-5">
         <Logo />
       </div>
 
