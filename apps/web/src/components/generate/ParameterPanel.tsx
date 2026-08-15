@@ -46,6 +46,9 @@ export function ParameterPanel() {
   const guidance = useGenerateStore((state) => state.guidance);
   const batchSize = useGenerateStore((state) => state.batchSize);
   const seedLocked = useGenerateStore((state) => state.seedLocked);
+  const generationMode = useGenerateStore((state) => state.generationMode);
+  const denoiseStrength = useGenerateStore((state) => state.denoiseStrength);
+  const setDenoiseStrength = useGenerateStore((state) => state.setDenoiseStrength);
 
   const setModelId = useGenerateStore(
     (state) => state.setModelId
@@ -448,6 +451,36 @@ useEffect(() => {
           ))}
         </select>
       </label>
+
+      {generationMode === "image_to_image" && (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-zinc-300">Denoise strength</p>
+              <p className="mt-1 text-xs text-zinc-600">Lower values preserve more of the input image.</p>
+            </div>
+
+            <span className="rounded-lg bg-zinc-900 px-2.5 py-1 font-mono text-xs text-violet-300">
+              {denoiseStrength.toFixed(2)}
+            </span>
+          </div>
+
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={denoiseStrength}
+            onChange={(event) => setDenoiseStrength(Number(event.target.value))}
+            className="mt-4 w-full accent-violet-600"
+          />
+
+          <div className="mt-1 flex justify-between text-[10px] text-zinc-700">
+            <span>Preserve</span>
+            <span>Transform</span>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <NumberField

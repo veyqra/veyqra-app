@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from threading import Lock
 from typing import Any
 from uuid import uuid4
@@ -15,6 +15,7 @@ from app.schemas.generation import (
     GenerationJobResponse,
     GenerationStatus,
 )
+from app.schemas.generation import GenerationMode
 from app.schemas.history import HistoryItemResponse
 from app.services.comfyui_client import ComfyUIClient
 from app.services.history_service import history_service
@@ -25,6 +26,14 @@ from app.services.job_store import job_store
 
 settings = get_settings()
 comfy_client = ComfyUIClient(settings.comfyui_url)
+
+# Resolve uploads dir relative to the API package, not the process cwd
+API_ROOT = Path(__file__).resolve().parents[2]
+UPLOAD_DIR = (
+    API_ROOT
+    / "data"
+    / "uploads"
+)
 
 
 @dataclass
@@ -105,7 +114,79 @@ class GenerationService:
             stored_job,
         )
 
-        built = build_flux_workflow(request)
+        # If an input image is provided for image-to-image, ensure it exists
+        # and upload it to ComfyUI so the workflow can reference it.
+        comfy_filename: str | None = None
+
+        try:
+            if request.mode == GenerationMode.IMAGE_TO_IMAGE:
+                if not request.input_image:
+                    raise ValueError("Input image is required.")
+
+                input_path = (
+                    UPLOAD_DIR
+                    / request.input_image
+                )
+
+                if not input_path.exists():
+                    raise ValueError(
+                        f"Input image does not exist: "
+                        f"{request.input_image}"
+                    )
+
+                comfy_filename = (
+                    await comfy_client.upload_image(
+                        input_path,
+                        request.input_image,
+                    )
+                )
+
+            if request.mode == GenerationMode.INPAINT:
+                # Ensure both input and mask exist on disk before proceeding.
+                if not request.input_image:
+                    raise ValueError("Input image is required.")
+
+                if not request.mask_image:
+                    raise ValueError("Mask image is required.")
+
+                input_path = UPLOAD_DIR / request.input_image
+                mask_path = UPLOAD_DIR / request.mask_image
+
+                if not input_path.exists():
+                    raise ValueError(
+                        "Input image does not exist."
+                    )
+
+                if not mask_path.exists():
+                    raise ValueError(
+                        "Mask image does not exist."
+                    )
+
+                # Inpainting isn't implemented yet; surface a clear error.
+                raise ValueError(
+                    "Inpainting is not implemented yet."
+                )
+
+            built = build_flux_workflow(
+                request=request,
+                model_filename=request.model_id,
+                input_image_filename=comfy_filename,
+            )
+        except Exception as error:
+            failed_response = response.model_copy(
+                update={
+                    "status": GenerationStatus.FAILED,
+                    "error": str(error),
+                }
+            )
+
+            stored_job.response = failed_response
+            self._persist_job(
+                job_id,
+                stored_job,
+            )
+
+            raise
 
         stored_job.actual_seed = built.seed
         

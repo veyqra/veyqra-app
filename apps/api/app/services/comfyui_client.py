@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 from urllib.parse import urlencode
+from pathlib import Path
 
 import httpx
 
@@ -150,3 +151,33 @@ class ComfyUIClient:
             raise ComfyUIError(
                 f"Unable to read ComfyUI object info: {exc}"
             ) from exc
+
+    async def upload_image(self, image_path: Path, filename: str) -> str:
+        async with httpx.AsyncClient() as client:
+            with image_path.open("rb") as image_file:
+                files = {
+                    "image": (
+                        filename,
+                        image_file,
+                        "application/octet-stream",
+                    )
+                }
+                data = {
+                    "type": "input",
+                    "overwrite": "true",
+                }
+                response = await client.post(
+                    f"{self.base_url}/upload/image",
+                    files=files,
+                    data=data,
+                    timeout=60.0,
+                )
+
+        if response.is_error:
+            raise ComfyUIError(
+                f"Unable to upload image to ComfyUI: "
+                f"{response.status_code}"
+            )
+
+        payload = response.json()
+        return payload["name"]

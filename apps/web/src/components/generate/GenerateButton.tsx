@@ -7,6 +7,7 @@ import {
   createGeneration,
   getGeneration,
 } from "@/services/generation-api";
+import { uploadGenerationImage } from "@/services/uploads-api";
 import { useGenerateStore } from "@/stores/generate-store";
 import type { GenerationJob } from "@/types/generate";
 
@@ -18,6 +19,22 @@ export function GenerateButton() {
   const isGenerating = useGenerateStore(
     (state) => state.isGenerating
   );
+
+  const generationMode = useGenerateStore(
+    (state) => state.generationMode
+  );
+  const inputImageFile = useGenerateStore(
+    (state) => state.inputImageFile
+  );
+  const uploadedInputFilename = useGenerateStore(
+    (state) => state.uploadedInputFilename
+  );
+  const setUploadedInputFilename = useGenerateStore(
+    (state) => state.setUploadedInputFilename
+  );
+  const maskImageFile = useGenerateStore((state) => state.maskImageFile);
+  const uploadedMaskFilename = useGenerateStore((state) => state.uploadedMaskFilename);
+  const setUploadedMaskFilename = useGenerateStore((state) => state.setUploadedMaskFilename);
 
   const setIsGenerating = useGenerateStore(
     (state) => state.setIsGenerating
@@ -43,6 +60,11 @@ export function GenerateButton() {
       ? `Generating ${currentJob.progress ?? 0}%`
       : "Generate";
 
+  const inputImageRequired =
+    generationMode !== "text_to_image";
+  const inputImageMissing =
+    inputImageRequired && !inputImageFile;
+
   async function handleGenerate() {
     setGenerationError(null);
     if (!prompt.trim() || isGenerating) {
@@ -52,7 +74,66 @@ export function GenerateButton() {
     setIsGenerating(true);
 
     try {
-      const createdJob = await createGeneration(getRequest());
+      if (
+        generationMode !== "text_to_image" &&
+        !inputImageFile
+      ) {
+        throw new Error(
+          "Select an input image before generating."
+        );
+      }
+
+      let inputFilename = uploadedInputFilename;
+
+      if (
+        generationMode !== "text_to_image" &&
+        inputImageFile &&
+        !inputFilename
+      ) {
+        const uploaded = await uploadGenerationImage(
+          inputImageFile
+        );
+        inputFilename = uploaded.filename;
+        setUploadedInputFilename(uploaded.filename);
+      }
+
+      let maskFilename = uploadedMaskFilename;
+
+      if (
+        generationMode === "inpaint" &&
+        !maskImageFile &&
+        !maskFilename
+      ) {
+        throw new Error(
+          "Select an inpaint mask before generating."
+        );
+      }
+
+      if (
+        generationMode === "inpaint" &&
+        maskImageFile &&
+        !maskFilename
+      ) {
+        const uploadedMask = await uploadGenerationImage(
+          maskImageFile
+        );
+        maskFilename = uploadedMask.filename;
+        setUploadedMaskFilename(uploadedMask.filename);
+      }
+
+      const request = getRequest();
+
+      const createdJob = await createGeneration({
+        ...request,
+        inputImage:
+          generationMode === "text_to_image"
+            ? null
+            : inputFilename,
+        maskImage:
+          generationMode === "inpaint"
+            ? maskFilename
+            : null,
+      });
 
       addJob(createdJob);
 
@@ -118,7 +199,7 @@ export function GenerateButton() {
     <div className="space-y-2">
       <button
         type="button"
-        disabled={!prompt.trim() || isGenerating}
+        disabled={!prompt.trim() || isGenerating || inputImageMissing}
         onClick={handleGenerate}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-4 font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
       >

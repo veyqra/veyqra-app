@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { resolutionPresets } from "@/lib/generation-presets";
 
 import type {
@@ -19,7 +20,14 @@ type GenerateStore = {
   steps: number;
   guidance: number;
   batchSize: number;
+  denoiseStrength: number;
   inputImageUrl: string | null;
+  maskImageFile: File | null;
+  maskImageUrl: string | null;
+  uploadedMaskFilename: string | null;
+  generationMode: "text_to_image" | "image_to_image" | "inpaint";
+  inputImageFile: File | null;
+  uploadedInputFilename: string | null;
   previewImageUrl: string | null;
   generationError: string | null;
   isGenerating: boolean;
@@ -38,7 +46,14 @@ type GenerateStore = {
   setSteps: (value: number) => void;
   setGuidance: (value: number) => void;
   setBatchSize: (value: number) => void;
+  setDenoiseStrength: (value: number) => void;
   setInputImageUrl: (value: string | null) => void;
+  setGenerationMode: (  value: "text_to_image" | "image_to_image" | "inpaint") => void;
+  setInputImageFile: (value: File | null) => void;
+  setMaskImageFile: (value: File | null) => void;
+  setMaskImageUrl: (value: string | null) => void;
+  setUploadedMaskFilename: (value: string | null) => void;
+  setUploadedInputFilename: (  value: string | null) => void;
   setPreviewImageUrl: (value: string | null) => void;
   setGenerationError: (  value: string | null) => void;
   setIsGenerating: (value: boolean) => void;
@@ -77,19 +92,28 @@ const initialSettings = {
   steps: 28,
   guidance: 3.5,
   batchSize: 1,
+  denoiseStrength: 0.65,
   inputImageUrl: null,
+  generationMode: "text_to_image" as const,
+  inputImageFile: null,
+  maskImageFile: null,
+  maskImageUrl: null,
+  uploadedMaskFilename: null,
+  uploadedInputFilename: null,
   previewImageUrl: null,
   generationError: null,
   isGenerating: false,
 };
 
-export const useGenerateStore = create<GenerateStore>((set, get) => ({
-  ...initialSettings,
+export const useGenerateStore = create<GenerateStore>()(
+  persist(
+    (set, get) => ({
+      ...initialSettings,
 
-  queue: [],
-  history: [],
+      queue: [],
+      history: [],
 
-  setPrompt: (prompt) => set({ prompt }),
+      setPrompt: (prompt) => set({ prompt }),
   setNegativePrompt: (negativePrompt) => set({ negativePrompt }),
   setModelId: (modelId) => set({ modelId }),
   setLoraId: (loraId) => set({ loraId }),
@@ -110,9 +134,16 @@ export const useGenerateStore = create<GenerateStore>((set, get) => ({
   setSteps: (steps) => set({ steps }),
   setGuidance: (guidance) => set({ guidance }),
   setBatchSize: (batchSize) => set({ batchSize }),
+  setDenoiseStrength: (denoiseStrength) =>  set({ denoiseStrength }),
   setInputImageUrl: (inputImageUrl) => set({ inputImageUrl }),
+  setMaskImageFile: (maskImageFile) =>  set({ maskImageFile }),
+  setMaskImageUrl: (maskImageUrl) =>  set({ maskImageUrl }),
+  setGenerationMode: (generationMode) =>  set({ generationMode }),
+  setInputImageFile: (inputImageFile) =>  set({ inputImageFile }),
   setPreviewImageUrl: (previewImageUrl) =>
     set({ previewImageUrl }),
+  setUploadedInputFilename: (uploadedInputFilename) =>  set({ uploadedInputFilename }),
+  setUploadedMaskFilename: (uploadedMaskFilename) =>  set({ uploadedMaskFilename }),
   setGenerationError: (generationError) =>  set({ generationError }),
   setIsGenerating: (isGenerating) => set({ isGenerating }),
 
@@ -160,21 +191,63 @@ export const useGenerateStore = create<GenerateStore>((set, get) => ({
         resolutionId: settings.resolutionId,
     }),  
 
-  getRequest: () => {
-    const state = get();
-    const parsedSeed = Number.parseInt(state.seed, 10);
+      getRequest: () => {
+        const state = get();
+        const parsedSeed = Number.parseInt(state.seed, 10);
 
-    return {
-      prompt: state.prompt.trim(),
-      negativePrompt: state.negativePrompt.trim(),
-      modelId: state.modelId,
-      loraId: state.loraId,
-      loraStrength: state.loraStrength,
-      resolutionId: state.resolutionId,
-      seed: Number.isNaN(parsedSeed) ? -1 : parsedSeed,
-      steps: state.steps,
-      guidance: state.guidance,
-      batchSize: state.batchSize,
-    };
-  },
-}));
+        return {
+          prompt: state.prompt.trim(),
+          negativePrompt: state.negativePrompt.trim(),
+          mode: state.generationMode,
+          inputImage:
+            state.generationMode === "text_to_image"
+              ? null
+              : state.uploadedInputFilename,
+          maskImage:
+            state.generationMode === "inpaint"
+              ? state.uploadedMaskFilename
+              : null,
+          modelId: state.modelId,
+          loraId: state.loraId,
+          loraStrength: state.loraStrength,
+          resolutionId: state.resolutionId,
+          seed: Number.isNaN(parsedSeed) ? -1 : parsedSeed,
+          steps: state.steps,
+          guidance: state.guidance,
+          denoiseStrength: state.denoiseStrength,
+          batchSize: state.batchSize,
+        };
+      },
+    }),
+    {
+      name: "veyqra-generate-store",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        prompt: state.prompt,
+        negativePrompt: state.negativePrompt,
+        modelId: state.modelId,
+        loraId: state.loraId,
+        loraStrength: state.loraStrength,
+        resolutionId: state.resolutionId,
+        seed: state.seed,
+        seedLocked: state.seedLocked,
+        steps: state.steps,
+        guidance: state.guidance,
+        batchSize: state.batchSize,
+        generationMode: state.generationMode,
+        uploadedInputFilename: state.uploadedInputFilename,
+        uploadedMaskFilename: state.uploadedMaskFilename,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) {
+          return;
+        }
+        state.isGenerating = false;
+        state.generationError = null;
+        state.inputImageUrl = null;
+        state.previewImageUrl = null;
+        state.queue = [];
+      },
+    }
+  )
+);

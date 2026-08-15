@@ -9,11 +9,15 @@ import type {
 type ApiGenerateRequest = {
   prompt: string;
   negative_prompt: string;
+  mode?: string;
+  input_image?: string | null;
   model_id: string;
   lora_id: string;
   lora_strength: number;
   resolution_id: string;
   seed: number;
+  denoise_strength: number;
+  mask_image?: string | null;
   steps: number;
   guidance: number;
   batch_size: number;
@@ -48,11 +52,15 @@ function toApiRequest(request: GenerateRequest): ApiGenerateRequest {
   return {
     prompt: request.prompt,
     negative_prompt: request.negativePrompt,
+    mode: request.mode,
+    input_image: request.inputImage,
+      mask_image: request.maskImage,
     model_id: request.modelId,
     lora_id: request.loraId,
     lora_strength: request.loraStrength,
     resolution_id: request.resolutionId,
     seed: request.seed,
+    denoise_strength: request.denoiseStrength,
     steps: request.steps,
     guidance: request.guidance,
     batch_size: request.batchSize,

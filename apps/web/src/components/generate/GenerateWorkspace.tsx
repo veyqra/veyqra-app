@@ -8,6 +8,9 @@ import { HistoryPanel } from "./HistoryPanel";
 import { ParameterPanel } from "./ParameterPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import { PromptEditor } from "./PromptEditor";
+import { GenerationModePanel } from "./GenerationModePanel";
+import { InputImagePanel } from "./InputImagePanel";
+import { MaskImagePanel } from "./MaskImagePanel";
 import { QueuePanel } from "./QueuePanel";
 
 export function GenerateWorkspace() {
@@ -81,6 +84,9 @@ export function GenerateWorkspace() {
             </p>
           </div>
 
+          <GenerationModePanel />
+          <InputImagePanel />
+          <MaskImagePanel />
           <PromptEditor />
 
           <div className="border-t border-zinc-800" />

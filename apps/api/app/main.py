@@ -10,6 +10,7 @@ from app.api.routes.models import router as models_router
 from app.api.routes.history import router as history_router
 from app.api.routes.storage import router as storage_router
 from app.api.routes.dashboard import router as dashboard_router
+from app.api.routes import uploads
 import asyncio
 
 from contextlib import asynccontextmanager
@@ -79,6 +80,11 @@ app.include_router(
 
 app.include_router(
     dashboard_router,
+    prefix=settings.api_prefix,
+)
+
+app.include_router(
+    uploads.router,
     prefix=settings.api_prefix,
 )
 

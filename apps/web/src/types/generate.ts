@@ -54,9 +54,16 @@ export type GeneratedImage = {
   createdAt: string;
 };
 
+export type GenerationMode =
+  | "text_to_image"
+  | "image_to_image"
+  | "inpaint";
+
 export type GenerateRequest = {
   prompt: string;
   negativePrompt: string;
+  mode: GenerationMode;
+  inputImage: string | null;
   modelId: string;
   loraId: string;
   loraStrength: number;
@@ -64,5 +71,7 @@ export type GenerateRequest = {
   seed: number;
   steps: number;
   guidance: number;
+  denoiseStrength: number;
   batchSize: number;
+  maskImage: string | null;
 };

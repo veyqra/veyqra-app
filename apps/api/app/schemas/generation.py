@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class GenerationStatus(StrEnum):
@@ -12,29 +12,91 @@ class GenerationStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class GenerationMode(StrEnum):
+    TEXT_TO_IMAGE = "text_to_image"
+    IMAGE_TO_IMAGE = "image_to_image"
+    INPAINT = "inpaint"
+
+
 class GenerateRequest(BaseModel):
-    prompt: str = Field(min_length=1, max_length=10_000)
-    negative_prompt: str = Field(default="", max_length=10_000)
+    prompt: str = Field(
+        min_length=1,
+        max_length=10_000,
+    )
+    negative_prompt: str = Field(
+        default="",
+        max_length=10_000,
+    )
+
+    mode: GenerationMode = GenerationMode.TEXT_TO_IMAGE
+    input_image: str | None = None
 
     model_id: str = Field(min_length=1)
     lora_id: str = Field(default="none")
-    lora_strength: float = Field(default=1.0, ge=0.0, le=2.0)
+    lora_strength: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=2.0,
+    )
 
     resolution_id: str = Field(min_length=1)
     seed: int = -1
-    steps: int = Field(default=28, ge=1, le=100)
-    guidance: float = Field(default=3.5, ge=0.0, le=30.0)
-    batch_size: int = Field(default=1, ge=1, le=8)
+    steps: int = Field(
+        default=28,
+        ge=1,
+        le=100,
+    )
+    guidance: float = Field(
+        default=3.5,
+        ge=0.0,
+        le=30.0,
+    )
+    batch_size: int = Field(
+        default=1,
+        ge=1,
+        le=8,
+    )
+    denoise_strength: float = Field(
+        default=0.65,
+        ge=0.0,
+        le=1.0,
+    )
+    mask_image: str | None = None
 
     @field_validator("prompt")
     @classmethod
-    def strip_prompt(cls, value: str) -> str:
-        cleaned = value.strip()
+    def validate_prompt(cls, value: str) -> str:
+        value = value.strip()
 
-        if not cleaned:
-            raise ValueError("Prompt must not be empty")
+        if not value:
+            raise ValueError(
+                "Prompt must not be empty."
+            )
 
-        return cleaned
+        return value
+
+    @model_validator(mode="after")
+    def validate_input_image(self):
+        if (
+            self.mode
+            in {
+                GenerationMode.IMAGE_TO_IMAGE,
+                GenerationMode.INPAINT,
+            }
+            and not self.input_image
+        ):
+            raise ValueError(
+                "An input image is required for this generation mode."
+            )
+        if (
+            self.mode == GenerationMode.INPAINT
+            and not self.mask_image
+        ):
+            raise ValueError(
+                "A mask image is required for inpainting."
+            )
+
+        return self
 
 
 class GeneratedImageResponse(BaseModel):
