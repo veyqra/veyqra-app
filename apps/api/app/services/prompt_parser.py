@@ -30,6 +30,23 @@ def extract_mask_prompt(prompt: str) -> str:
             (
                 " to ",
                 " into ",
+                " for ",
+                " with ",
+            ),
+        ),
+        (
+            "switch ",
+            (
+                " for ",
+                " to ",
+                " with ",
+            ),
+        ),
+        (
+            "swap ",
+            (
+                " for ",
+                " with ",
             ),
         ),
         (
@@ -114,7 +131,8 @@ def remove_mask_prompt(prompt: str, mask_prompt: str) -> str:
     result = prompt
     for candidate in candidates:
         pattern = re.compile(
-            rf"(?<!\w)(?:(?:the|a|an)\s+)?{re.escape(candidate)}(?!\w)",
+            rf"(?<!\w)(?:(?:the|a|an|his|her|their)\s+)?"
+            rf"{re.escape(candidate)}(?!\w)",
             re.IGNORECASE,
         )
         result = pattern.sub("", result)
@@ -122,7 +140,8 @@ def remove_mask_prompt(prompt: str, mask_prompt: str) -> str:
     # Once the mask target is gone, remove the remaining edit command so the
     # image model receives the desired replacement as a clean description.
     result = re.sub(
-        r"\breplace\s*(?:(?:with|by)\s+)?",
+        r"\b(?:replace|change|switch|swap)\s*"
+        r"(?:(?:with|by|to|into|for)\s+)?",
         "",
         result,
         flags=re.IGNORECASE,
@@ -146,16 +165,19 @@ def _find_sentence_end(value: str) -> int | None:
 def _clean_mask_target(value: str) -> str:
     value = value.strip(" \t\r\n,.;:!?")
 
-    articles = (
+    determiners = (
         "the ",
         "a ",
         "an ",
+        "his ",
+        "her ",
+        "their ",
     )
 
     lowered = value.lower()
-    for article in articles:
-        if lowered.startswith(article):
-            value = value[len(article):]
+    for determiner in determiners:
+        if lowered.startswith(determiner):
+            value = value[len(determiner):]
             break
 
     return value.strip()

@@ -2,14 +2,26 @@
 
 import { usePathname } from "next/navigation";
 import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import {
   Bell,
   Cloud,
   Cpu,
   Menu,
   Moon,
   Search,
-  UserCircle2,
 } from "lucide-react";
+
+import { getDashboard } from "@/services/dashboard-api";
+import { useNotificationStore } from "@/stores/notification-store";
+import type { DashboardData } from "@/types/dashboard";
+import { CloudStatusPopover } from "./CloudStatusPopover";
+import { NotificationPopover } from "./NotificationPopover";
+import { SystemStatusPopover } from "./SystemStatusPopover";
 
 const routeInfo = {
   "/dashboard": {
@@ -54,6 +66,141 @@ export function TopBar({
   onOpenMobileMenu,
 }: TopBarProps) {
   const pathname = usePathname();
+  const [dashboard, setDashboard] =
+    useState<DashboardData | null>(null);
+  const [systemOpen, setSystemOpen] = useState(false);
+  const [cloudOpen, setCloudOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] =
+    useState(false);
+  const addNotification = useNotificationStore(
+    (state) => state.addNotification
+  );
+  const notifications = useNotificationStore(
+    (state) => state.notifications
+  );
+  const previousJobStatusRef = useRef<
+    Map<string, string> | null
+  >(null);
+  const unreadCount = notifications.filter(
+    (notification) => !notification.read
+  ).length;
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      const data = await getDashboard();
+      setDashboard(data);
+    } catch (error) {
+      console.error(
+        "Unable to load top bar status:",
+        error
+      );
+    }
+  }, []);
+
+  const closeSystemStatus = useCallback(() => {
+    setSystemOpen(false);
+  }, []);
+
+  const closeCloudStatus = useCallback(() => {
+    setCloudOpen(false);
+  }, []);
+
+  const closeNotifications = useCallback(() => {
+    setNotificationsOpen(false);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initializeDashboard() {
+      try {
+        const data = await getDashboard();
+
+        if (!cancelled) {
+          setDashboard(data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error(
+            "Unable to load initial top bar status:",
+            error
+          );
+        }
+      }
+    }
+
+    void initializeDashboard();
+
+    const interval = window.setInterval(() => {
+      void loadDashboard();
+    }, 10_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    if (!dashboard) {
+      return;
+    }
+
+    const currentStatuses = new Map<string, string>();
+
+    for (const job of dashboard.recentJobs) {
+      currentStatuses.set(job.id, job.status);
+    }
+
+    if (previousJobStatusRef.current === null) {
+      previousJobStatusRef.current = currentStatuses;
+      return;
+    }
+
+    const previousStatuses = previousJobStatusRef.current;
+
+    for (const job of dashboard.recentJobs) {
+      const previousStatus = previousStatuses.get(job.id);
+
+      if (previousStatus === job.status) {
+        continue;
+      }
+
+      if (job.status === "completed") {
+        addNotification({
+          kind: "success",
+          title: "Generation completed",
+          message: job.prompt || "Your image is ready.",
+          jobId: job.id,
+        });
+      }
+
+      if (job.status === "failed") {
+        addNotification({
+          kind: "error",
+          title: "Generation failed",
+          message:
+            job.error ||
+            job.prompt ||
+            "The generation could not be completed.",
+          jobId: job.id,
+        });
+      }
+
+      if (job.status === "cancelled") {
+        addNotification({
+          kind: "info",
+          title: "Generation cancelled",
+          message:
+            job.prompt ||
+            "The generation was cancelled.",
+          jobId: job.id,
+        });
+      }
+    }
+
+    previousJobStatusRef.current = currentStatuses;
+  }, [addNotification, dashboard]);
 
   const currentRoute =
     Object.entries(routeInfo).find(
@@ -98,33 +245,134 @@ export function TopBar({
           <Search size={18} />
         </button>
 
-        <div className="hidden items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 md:flex">
-          <Cpu size={18} className="text-emerald-400" />
+        <div className="relative">
+          <button
+            id="system-status-trigger"
+            type="button"
+            onClick={() => {
+              setCloudOpen(false);
+              setNotificationsOpen(false);
+              setSystemOpen((value) => !value);
+            }}
+            aria-expanded={systemOpen}
+            aria-controls="system-status-popover"
+            aria-label="Show local system status"
+            className="flex h-11 items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 transition hover:border-zinc-700 hover:bg-zinc-800"
+          >
+            <Cpu
+              className={`h-4 w-4 ${
+                dashboard?.system.gpuOnline
+                  ? "text-emerald-400"
+                  : "text-zinc-600"
+              }`}
+            />
 
-          <div>
-            <p className="text-xs text-zinc-500">GPU</p>
-            <p className="text-sm font-medium">Local</p>
-          </div>
+            <div className="hidden text-left sm:block">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-600">
+                GPU
+              </p>
+
+              <p className="text-xs font-medium text-zinc-200">
+                Local
+              </p>
+            </div>
+          </button>
+
+          <SystemStatusPopover
+            open={systemOpen}
+            onClose={closeSystemStatus}
+            comfyOnline={
+              dashboard?.system.comfyuiOnline ?? false
+            }
+            gpuOnline={
+              dashboard?.system.gpuOnline ?? false
+            }
+            gpuName={dashboard?.system.gpu?.name ?? null}
+            vramTotal={
+              dashboard?.system.gpu?.vramTotal ?? null
+            }
+            vramFree={
+              dashboard?.system.gpu?.vramFree ?? null
+            }
+            queueRunning={
+              dashboard?.system.queueRunning ?? 0
+            }
+            queuePending={
+              dashboard?.system.queuePending ?? 0
+            }
+          />
         </div>
 
-        <div className="hidden items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 xl:flex">
-          <Cloud size={18} className="text-sky-400" />
+        <div className="relative">
+          <button
+            id="cloud-status-trigger"
+            type="button"
+            onClick={() => {
+              setSystemOpen(false);
+              setNotificationsOpen(false);
+              setCloudOpen((value) => !value);
+            }}
+            aria-expanded={cloudOpen}
+            aria-controls="cloud-status-popover"
+            aria-label="Show AWS cloud status"
+            className="flex h-11 items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 transition hover:border-zinc-700 hover:bg-zinc-800"
+          >
+            <Cloud className="h-4 w-4 text-sky-400" />
 
-          <div>
-            <p className="text-xs text-zinc-500">Cloud</p>
-            <p className="text-sm font-medium">My AWS</p>
-          </div>
+            <div className="hidden text-left sm:block">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-600">
+                Cloud
+              </p>
+
+              <p className="text-xs font-medium text-zinc-200">
+                My AWS
+              </p>
+            </div>
+          </button>
+
+          <CloudStatusPopover
+            open={cloudOpen}
+            onClose={closeCloudStatus}
+            connected={false}
+          />
         </div>
 
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-violet-500 hover:bg-zinc-800"
-        >
-          <Bell size={18} />
+        <div className="relative">
+          <button
+            id="notifications-trigger"
+            type="button"
+            onClick={() => {
+              setSystemOpen(false);
+              setCloudOpen(false);
+              setNotificationsOpen(
+                (value) => !value
+              );
+            }}
+            aria-expanded={notificationsOpen}
+            aria-controls="notifications-popover"
+            aria-label={
+              unreadCount > 0
+                ? `Notifications, ${unreadCount} unread`
+                : "Notifications"
+            }
+            className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-violet-500 hover:bg-zinc-800"
+          >
+            <Bell size={18} />
 
-          <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500" />
-        </button>
+            {unreadCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-zinc-950">
+                {unreadCount > 9
+                  ? "9+"
+                  : unreadCount}
+              </span>
+            )}
+          </button>
+
+          <NotificationPopover
+            open={notificationsOpen}
+            onClose={closeNotifications}
+          />
+        </div>
 
         <button
           type="button"
@@ -134,19 +382,21 @@ export function TopBar({
           <Moon size={18} />
         </button>
 
-        <button
-          type="button"
-          className="hidden items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 transition hover:border-violet-500 2xl:flex"
-        >
-          <UserCircle2 size={30} />
+        <div className="hidden items-center gap-3 border-l border-zinc-800 pl-4 md:flex">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600/15 text-sm font-medium text-violet-300">
+            C
+          </div>
 
-          <div className="text-left">
-            <p className="text-sm font-medium">Chris</p>
-            <p className="text-xs text-zinc-500">
-              Local Account
+          <div className="hidden xl:block">
+            <p className="text-sm font-medium text-zinc-200">
+              Chris
+            </p>
+
+            <p className="text-[11px] text-zinc-600">
+              Local account
             </p>
           </div>
-        </button>
+        </div>
       </div>
     </header>
   );

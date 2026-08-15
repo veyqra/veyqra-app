@@ -19,6 +19,9 @@ class ComfyUIClient:
         self.base_url = base_url.rstrip("/")
 
     async def health(self) -> dict[str, Any]:
+        return await self.get_system_stats()
+
+    async def get_system_stats(self) -> dict[str, Any]:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(
@@ -30,6 +33,20 @@ class ComfyUIClient:
         except httpx.HTTPError as exc:
             raise ComfyUIError(
                 f"Unable to connect to ComfyUI: {exc}"
+            ) from exc
+
+    async def get_queue(self) -> dict[str, Any]:
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/queue"
+                )
+                response.raise_for_status()
+                return response.json()
+
+        except httpx.HTTPError as exc:
+            raise ComfyUIError(
+                f"Unable to read ComfyUI queue: {exc}"
             ) from exc
 
     async def queue_prompt(

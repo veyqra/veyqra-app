@@ -1,10 +1,24 @@
 import type { GenerationJob } from "@/types/generate";
 
+export type DashboardGpu = {
+  name: string | null;
+  type: string | null;
+  vramTotal: number | null;
+  vramFree: number | null;
+  torchVramTotal: number | null;
+  torchVramFree: number | null;
+};
+
+export type DashboardSystem = {
+  comfyuiOnline: boolean;
+  gpuOnline: boolean;
+  gpu: DashboardGpu | null;
+  queueRunning: number;
+  queuePending: number;
+};
+
 export type DashboardData = {
-  system: {
-    comfyuiOnline: boolean;
-    gpuOnline: boolean;
-  };
+  system: DashboardSystem;
 
   stats: {
     diffusionModels: number;

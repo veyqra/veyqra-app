@@ -33,6 +33,16 @@ type ApiDashboardResponse = {
   system: {
     comfyui_online: boolean;
     gpu_online: boolean;
+    gpu: {
+      name: string | null;
+      type: string | null;
+      vram_total: number | null;
+      vram_free: number | null;
+      torch_vram_total: number | null;
+      torch_vram_free: number | null;
+    } | null;
+    queue_running: number;
+    queue_pending: number;
   };
 
   stats: {
@@ -93,6 +103,24 @@ export async function getDashboard(): Promise<DashboardData> {
         response.system.comfyui_online,
       gpuOnline:
         response.system.gpu_online,
+      gpu: response.system.gpu
+        ? {
+            name: response.system.gpu.name,
+            type: response.system.gpu.type,
+            vramTotal:
+              response.system.gpu.vram_total,
+            vramFree:
+              response.system.gpu.vram_free,
+            torchVramTotal:
+              response.system.gpu.torch_vram_total,
+            torchVramFree:
+              response.system.gpu.torch_vram_free,
+          }
+        : null,
+      queueRunning:
+        response.system.queue_running,
+      queuePending:
+        response.system.queue_pending,
     },
 
     stats: {

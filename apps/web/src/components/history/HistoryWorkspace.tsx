@@ -204,10 +204,7 @@ export function HistoryWorkspace() {
     router.push("/generate");
   }
 
-  function handleImagePrepared(
-    item: HistoryItem
-  ) {
-    applyItemSettings(item);
+  function handleImagePrepared() {
     setSelectedItem(null);
     router.push("/generate");
   }
@@ -319,9 +316,7 @@ type HistoryCardProps = {
   item: HistoryItem;
   onDelete: (id: string) => Promise<void>;
   onReuse: (item: HistoryItem) => void;
-  onImagePrepared: (
-    item: HistoryItem
-  ) => void;
+  onImagePrepared: () => void;
   onError: (message: string) => void;
   onOpen: (item: HistoryItem) => void;
 };
@@ -387,7 +382,7 @@ function HistoryCard({
         <ImageReuseActions
           imageId={item.id}
           imageUrl={item.imageUrl}
-          onPrepared={() => onImagePrepared(item)}
+          onPrepared={onImagePrepared}
           onError={onError}
         />
 
@@ -441,9 +436,7 @@ function HistoryDetailModal({
   onPrevious: () => void;
   onNext: () => void;
   onReuse: (item: HistoryItem) => void;
-  onImagePrepared: (
-    item: HistoryItem
-  ) => void;
+  onImagePrepared: () => void;
   onError: (message: string) => void;
 }) {
   return (
@@ -585,7 +578,7 @@ function HistoryDetailModal({
             <ImageReuseActions
               imageId={item.id}
               imageUrl={item.imageUrl}
-              onPrepared={() => onImagePrepared(item)}
+              onPrepared={onImagePrepared}
               onError={onError}
             />
           </aside>
