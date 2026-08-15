@@ -273,6 +273,19 @@
       "title": "Load LoRA"
     }
   },
+  "253": {
+    "inputs": {
+      "filename_prefix": "Veyqra_mask",
+      "images": [
+        "21",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Mask"
+    }
+  },
   "255": {
     "inputs": {
       "mask": [

@@ -213,7 +213,10 @@ export const useGenerateStore = create<GenerateStore>()(
           seed: Number.isNaN(parsedSeed) ? -1 : parsedSeed,
           steps: state.steps,
           guidance: state.guidance,
-          denoiseStrength: state.denoiseStrength,
+          denoiseStrength:
+            state.generationMode === "inpaint"
+              ? 1
+              : state.denoiseStrength,
           batchSize: state.batchSize,
         };
       },

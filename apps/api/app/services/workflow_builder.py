@@ -13,6 +13,7 @@ from app.services.prompt_parser import (
     extract_mask_prompt,
     normalize_mask_prompt,
 )
+from app.services.translation_service import translate_to_english
 
 API_ROOT = Path(__file__).resolve().parents[2]
 
@@ -105,6 +106,7 @@ def build_flux_text_to_image_workflow(
     )
 
     workflow = deepcopy(load_flux_text_to_image_workflow_template())
+    translated_prompt = translate_to_english(request.prompt).text
 
     width, height = RESOLUTION_BY_ID.get(
         request.resolution_id,
@@ -163,9 +165,7 @@ def build_flux_text_to_image_workflow(
     #
     workflow["5"]["inputs"]["clip_l"] = ""
 
-    workflow["5"]["inputs"]["t5xxl"] = (
-        request.prompt
-    )
+    workflow["5"]["inputs"]["t5xxl"] = translated_prompt
 
     workflow["5"]["inputs"]["guidance"] = (
         request.guidance
@@ -226,6 +226,7 @@ def build_flux_image_to_image_workflow(
     validate_flux_text_to_image_model(model_filename)
 
     workflow = deepcopy(load_flux_image_to_image_workflow_template())
+    translated_prompt = translate_to_english(request.prompt).text
 
     if input_image_size is None:
         raise ValueError(
@@ -280,12 +281,8 @@ def build_flux_image_to_image_workflow(
         ]
 
     # Node 5 FLUX prompt / guidance
-    workflow["5"]["inputs"]["clip_l"] = (
-        request.prompt
-    )
-    workflow["5"]["inputs"]["t5xxl"] = (
-        request.prompt
-    )
+    workflow["5"]["inputs"]["clip_l"] = translated_prompt
+    workflow["5"]["inputs"]["t5xxl"] = translated_prompt
     workflow["5"]["inputs"]["guidance"] = (
         request.guidance
     )
@@ -371,6 +368,12 @@ def build_flux_inpaint_workflow(
     validate_flux_inpaint_model(model_filename)
 
     workflow = deepcopy(load_flux_inpaint_workflow_template())
+    prompt_translation = translate_to_english(request.prompt)
+    translated_prompt = prompt_translation.text
+    translated_negative_prompt = translate_to_english(
+        request.negative_prompt,
+        source_language=prompt_translation.source_language,
+    ).text
 
     if input_image_size is None:
         raise ValueError(
@@ -407,14 +410,17 @@ def build_flux_inpaint_workflow(
         workflow["252"]["inputs"]["strength_model"] = request.lora_strength
         workflow["247"]["inputs"]["model"] = ["252", 0]
 
-    workflow["248"]["inputs"]["clip_l"] = request.prompt
-    workflow["248"]["inputs"]["t5xxl"] = request.prompt
+    workflow["248"]["inputs"]["clip_l"] = translated_prompt
+    workflow["248"]["inputs"]["t5xxl"] = translated_prompt
     workflow["248"]["inputs"]["guidance"] = request.guidance
-    workflow["250"]["inputs"]["clip_l"] = request.negative_prompt
-    workflow["250"]["inputs"]["t5xxl"] = request.negative_prompt
+    workflow["250"]["inputs"]["clip_l"] = translated_negative_prompt
+    workflow["250"]["inputs"]["t5xxl"] = translated_negative_prompt
 
     workflow["247"]["inputs"]["steps"] = request.steps
-    workflow["247"]["inputs"]["denoise"] = request.denoise_strength
+    # FLUX Fill expects full denoising for inpainting. Keeping this
+    # authoritative in the API also protects non-web clients from
+    # accidentally submitting the image-to-image default.
+    workflow["247"]["inputs"]["denoise"] = 1.0
 
     # Seed
     if request.seed == -1:
@@ -435,10 +441,18 @@ def build_flux_inpaint_workflow(
         else ""
     )
 
-    mask_prompt = (
-        explicit_mask_prompt
-        or extract_mask_prompt(request.prompt)
-    )
+    if explicit_mask_prompt:
+        mask_source_language = (
+            prompt_translation.source_language
+            if prompt_translation.source_language != "en"
+            else None
+        )
+        mask_prompt = translate_to_english(
+            explicit_mask_prompt,
+            source_language=mask_source_language,
+        ).text
+    else:
+        mask_prompt = extract_mask_prompt(translated_prompt)
 
     if not mask_prompt:
         raise ValueError(

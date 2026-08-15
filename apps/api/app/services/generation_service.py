@@ -416,8 +416,18 @@ class GenerationService:
         ):
             mask_image_info = self._extract_node_image(
                 history_entry,
-                "22",
+                "253",
             )
+            default_mask_folder_type = "output"
+
+            # Jobs queued before the dedicated mask SaveImage node was
+            # introduced only expose the temporary PreviewImage output.
+            if mask_image_info is None:
+                mask_image_info = self._extract_node_image(
+                    history_entry,
+                    "22",
+                )
+                default_mask_folder_type = "temp"
 
             if mask_image_info is not None:
                 mask_filename = (
@@ -429,7 +439,7 @@ class GenerationService:
                         ),
                         folder_type=mask_image_info.get(
                             "type",
-                            "temp",
+                            default_mask_folder_type,
                         ),
                     )
                 )

@@ -11,6 +11,7 @@
     "dev": "echo \"Run frontend or backend individually\"",
     "web": "npm run dev --workspace=web",
     "api": "cd apps/api && .venv/bin/uvicorn app.main:app --reload",
+    "translation:setup": "cd apps/api && .venv/bin/python scripts/install_translation_models.py",
     "lint": "echo \"Coming soon\"",
     "build": "echo \"Coming soon\""
   },

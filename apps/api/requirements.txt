@@ -5,3 +5,7 @@ httpx==0.28.1
 python-multipart
 websockets==17.0.1
 Pillow>=11.0,<13
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.13.0+cpu
+argostranslate==1.11.0
+langdetect==1.0.9

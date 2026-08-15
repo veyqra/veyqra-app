@@ -6,6 +6,9 @@ apps/api/data/history.json
 apps/api/data/history-images/
 apps/api/data/uploads/
 apps/api/data/jobs.json
+apps/api/data/translation-models/
+apps/api/data/translation-downloads/
+apps/api/data/translation-runtime/
 
 # Next.js
 .next/
