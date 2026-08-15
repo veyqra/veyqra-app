@@ -20,14 +20,12 @@ export function GenerateWorkspace() {
     (state) => state.setGenerationError
   );
   const queue = useGenerateStore((state) => state.queue);
-  const currentJob = queue.find(
+  const activeJobs = queue.filter(
     (job) =>
       job.status === "queued" ||
       job.status === "running"
   );
-  const isGenerating = useGenerateStore(
-    (state) => state.isGenerating
-  );
+  const currentJob = activeJobs[0];
   return (
     <div className="space-y-6">
       {generationError && (
@@ -48,13 +46,15 @@ export function GenerateWorkspace() {
           </div>
         </div>
       )}
-      {isGenerating && currentJob && (
+      {currentJob && (
         <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-violet-300">
-              {currentJob.status === "queued"
-                ? "Waiting for ComfyUI..."
-                : "Generating image..."}
+              {activeJobs.length === 1
+                ? currentJob.status === "queued"
+                  ? "1 job waiting in ComfyUI..."
+                  : "1 job generating..."
+                : `${activeJobs.length} jobs active in ComfyUI`}
             </span>
             <span className="font-mono text-xs text-zinc-400">
               {currentJob.progress ?? 0}%

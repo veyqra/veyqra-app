@@ -22,6 +22,8 @@ type ApiGenerateRequest = {
   mask_expand?: number;
   steps: number;
   guidance: number;
+  sampler: GenerateRequest["sampler"];
+  scheduler: GenerateRequest["scheduler"];
   batch_size: number;
 };
 
@@ -70,6 +72,8 @@ function toApiRequest(request: GenerateRequest): ApiGenerateRequest {
     denoise_strength: request.denoiseStrength,
     steps: request.steps,
     guidance: request.guidance,
+    sampler: request.sampler,
+    scheduler: request.scheduler,
     batch_size: request.batchSize,
   };
 }

@@ -76,7 +76,13 @@ async def get_generation(job_id: str) -> GenerationJobResponse:
     response_model=GenerationJobResponse,
 )
 async def cancel_generation(job_id: str) -> GenerationJobResponse:
-    job = await generation_service.cancel_job(job_id)
+    try:
+        job = await generation_service.cancel_job(job_id)
+    except ComfyUIError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
     if job is None:
         raise HTTPException(

@@ -62,6 +62,17 @@ export type GenerationMode =
   | "image_to_image"
   | "inpaint";
 
+export type SamplerName =
+  | "euler"
+  | "euler_ancestral"
+  | "dpmpp_2m"
+  | "dpmpp_2m_sde";
+
+export type SchedulerName =
+  | "normal"
+  | "karras"
+  | "exponential";
+
 export type GenerateRequest = {
   prompt: string;
   negativePrompt: string;
@@ -74,6 +85,8 @@ export type GenerateRequest = {
   seed: number;
   steps: number;
   guidance: number;
+  sampler: SamplerName;
+  scheduler: SchedulerName;
   denoiseStrength: number;
   batchSize: number;
   maskPrompt: string;

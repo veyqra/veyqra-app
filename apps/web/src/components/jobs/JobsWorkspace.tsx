@@ -169,6 +169,8 @@ export function JobsWorkspace() {
   async function handleCancel(
     id: string
   ) {
+    setError(null);
+
     try {
       const updated =
         await cancelGeneration(id);
@@ -184,6 +186,11 @@ export function JobsWorkspace() {
       console.error(
         "Unable to cancel generation job:",
         cancelError
+      );
+      setError(
+        cancelError instanceof Error
+          ? cancelError.message
+          : "Veyqra could not cancel the generation job."
       );
     }
   }

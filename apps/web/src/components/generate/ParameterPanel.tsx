@@ -16,9 +16,16 @@ import {
   Unlock,
 } from "lucide-react";
 
-import { resolutionPresets } from "@/lib/generation-presets";
+import {
+  resolutionPresets,
+  sdxlResolutionPresets,
+} from "@/lib/generation-presets";
 import { getModelCatalog } from "@/services/models-api";
 import { useGenerateStore } from "@/stores/generate-store";
+import type {
+  SamplerName,
+  SchedulerName,
+} from "@/types/generate";
 import type {
   ModelCatalog,
   ModelItem,
@@ -44,6 +51,8 @@ export function ParameterPanel() {
   const seed = useGenerateStore((state) => state.seed);
   const steps = useGenerateStore((state) => state.steps);
   const guidance = useGenerateStore((state) => state.guidance);
+  const sampler = useGenerateStore((state) => state.sampler);
+  const scheduler = useGenerateStore((state) => state.scheduler);
   const batchSize = useGenerateStore((state) => state.batchSize);
   const seedLocked = useGenerateStore((state) => state.seedLocked);
   const generationMode = useGenerateStore((state) => state.generationMode);
@@ -51,9 +60,14 @@ export function ParameterPanel() {
     generationMode !== "text_to_image";
   const denoiseStrength = useGenerateStore((state) => state.denoiseStrength);
   const setDenoiseStrength = useGenerateStore((state) => state.setDenoiseStrength);
+  const maskExpand = useGenerateStore((state) => state.maskExpand);
+  const setMaskExpand = useGenerateStore((state) => state.setMaskExpand);
 
   const setModelId = useGenerateStore(
     (state) => state.setModelId
+  );
+  const setModelFamily = useGenerateStore(
+    (state) => state.setModelFamily
   );
   const setLoraId = useGenerateStore(
     (state) => state.setLoraId
@@ -80,11 +94,40 @@ export function ParameterPanel() {
   const setGuidance = useGenerateStore(
     (state) => state.setGuidance
   );
+  const setSampler = useGenerateStore(
+    (state) => state.setSampler
+  );
+  const setScheduler = useGenerateStore(
+    (state) => state.setScheduler
+  );
   const setBatchSize = useGenerateStore(
     (state) => state.setBatchSize
   );
   const resetSettings = useGenerateStore(
     (state) => state.resetSettings
+  );
+
+  const applyFamilyDefaults = useCallback(
+    (family: ModelItem["family"]) => {
+      if (family === "sdxl") {
+        setSteps(30);
+        setGuidance(6.0);
+        setSampler("dpmpp_2m");
+        setScheduler("karras");
+        setResolutionId("1024x1024");
+      } else if (family === "flux") {
+        setSteps(28);
+        setGuidance(3.5);
+        setResolutionId(resolutionPresets[0]?.id ?? "square");
+      }
+    },
+    [
+      setGuidance,
+      setResolutionId,
+      setSampler,
+      setScheduler,
+      setSteps,
+    ]
   );
 
   const [catalog, setCatalog] =
@@ -113,7 +156,9 @@ export function ParameterPanel() {
           (model) => model.filename === modelId
         )
       ) {
-        setModelId(selectableModels[0].filename);
+        const fallbackModel = selectableModels[0];
+        setModelId(fallbackModel.filename);
+        applyFamilyDefaults(fallbackModel.family);
       }
     } catch (loadError) {
       console.error(
@@ -125,7 +170,12 @@ export function ParameterPanel() {
     } finally {
       setIsLoading(false);
     }
-  }, [modelId, generationMode, setModelId]);
+  }, [
+    applyFamilyDefaults,
+    modelId,
+    generationMode,
+    setModelId,
+  ]);
 
 useEffect(() => {
   let cancelled = false;
@@ -151,7 +201,9 @@ useEffect(() => {
           (model) => model.filename === modelId
         )
       ) {
-        setModelId(selectableModels[0].filename);
+        const fallbackModel = selectableModels[0];
+        setModelId(fallbackModel.filename);
+        applyFamilyDefaults(fallbackModel.family);
       }
     } catch (loadError) {
       if (cancelled) {
@@ -178,7 +230,7 @@ useEffect(() => {
   return () => {
     cancelled = true;
   };
-}, [modelId, generationMode, setModelId]);
+}, [applyFamilyDefaults, modelId, generationMode, setModelId]);
 
   const selectedModel = useMemo(
     () =>
@@ -192,6 +244,39 @@ useEffect(() => {
       catalog.loras.find((lora) => lora.filename === loraId),
     [catalog.loras, loraId]
   );
+  const isSdxl = selectedModel?.family === "sdxl";
+  const availableResolutionPresets = isSdxl
+    ? sdxlResolutionPresets
+    : resolutionPresets;
+
+  useEffect(() => {
+    setModelFamily(selectedModel?.family ?? null);
+  }, [selectedModel?.family, setModelFamily]);
+
+  useEffect(() => {
+    if (
+      preservesInputResolution ||
+      !selectedModel ||
+      availableResolutionPresets.some(
+        (preset) => preset.id === resolutionId
+      )
+    ) {
+      return;
+    }
+
+    setResolutionId(
+      isSdxl
+        ? "1024x1024"
+        : resolutionPresets[0]?.id ?? "square"
+    );
+  }, [
+    availableResolutionPresets,
+    isSdxl,
+    preservesInputResolution,
+    resolutionId,
+    selectedModel,
+    setResolutionId,
+  ]);
   
   const generateModels = useMemo(
       () =>
@@ -285,9 +370,22 @@ useEffect(() => {
 
         <select
           value={modelId}
-          onChange={(event) =>
-            setModelId(event.target.value)
-          }
+          onChange={(event) => {
+            const filename = event.target.value;
+            const nextModel = catalog.diffusionModels.find(
+              (model) => model.filename === filename
+            );
+
+            setModelId(filename);
+
+            if (
+              nextModel &&
+              nextModel.family !== selectedModel?.family
+            ) {
+              setLoraId("none");
+              applyFamilyDefaults(nextModel.family);
+            }
+          }}
           disabled={
             isLoading ||
             generateModels.length === 0
@@ -458,7 +556,7 @@ useEffect(() => {
               Original image size
             </option>
           ) : (
-            resolutionPresets.map((resolution) => (
+            availableResolutionPresets.map((resolution) => (
               <option
                 key={resolution.id}
                 value={resolution.id}
@@ -500,6 +598,39 @@ useEffect(() => {
         </div>
       )}
 
+      {generationMode === "inpaint" && (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-zinc-300">Grow mask</p>
+              <p className="mt-1 text-xs text-zinc-600">
+                Expands the detected mask to blend the edited edges.
+              </p>
+            </div>
+
+            <span className="shrink-0 rounded-lg bg-zinc-900 px-2.5 py-1 font-mono text-xs text-violet-300">
+              {maskExpand} px
+            </span>
+          </div>
+
+          <input
+            type="range"
+            min="0"
+            max="128"
+            step="1"
+            value={maskExpand}
+            onChange={(event) => setMaskExpand(Number(event.target.value))}
+            className="mt-4 w-full accent-violet-600"
+          />
+
+          <div className="mt-1 flex justify-between text-[10px] text-zinc-700">
+            <span>0 px</span>
+            <span>64 px</span>
+            <span>128 px</span>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <NumberField
           label="Steps"
@@ -510,13 +641,50 @@ useEffect(() => {
         />
 
         <NumberField
-          label="Guidance"
+          label={isSdxl ? "CFG" : "Guidance"}
           value={guidance}
-          min={0}
-          max={30}
-          step={0.1}
+          min={1}
+          max={isSdxl ? 12 : 10}
+          step={isSdxl ? 0.5 : 0.1}
           onChange={setGuidance}
         />
+
+        {isSdxl && (
+          <>
+            <label className="block text-sm font-medium text-zinc-300">
+              Sampler
+
+              <select
+                value={sampler}
+                onChange={(event) =>
+                  setSampler(event.target.value as SamplerName)
+                }
+                className={inputClassName}
+              >
+                <option value="dpmpp_2m">DPM++ 2M</option>
+                <option value="dpmpp_2m_sde">DPM++ 2M SDE</option>
+                <option value="euler">Euler</option>
+                <option value="euler_ancestral">Euler Ancestral</option>
+              </select>
+            </label>
+
+            <label className="block text-sm font-medium text-zinc-300">
+              Scheduler
+
+              <select
+                value={scheduler}
+                onChange={(event) =>
+                  setScheduler(event.target.value as SchedulerName)
+                }
+                className={inputClassName}
+              >
+                <option value="karras">Karras</option>
+                <option value="normal">Normal</option>
+                <option value="exponential">Exponential</option>
+              </select>
+            </label>
+          </>
+        )}
 
         <div className="block text-sm font-medium text-zinc-300">
           <div className="flex items-center justify-between">
@@ -616,7 +784,7 @@ useEffect(() => {
             value={
               preservesInputResolution
                 ? "Original image size"
-                : resolutionPresets.find(
+                : availableResolutionPresets.find(
                     (item) => item.id === resolutionId
                   )?.label ?? resolutionId
             }
@@ -702,6 +870,14 @@ function getSelectableModels(
           Number(isRecommendedInpaintModel(b)) -
           Number(isRecommendedInpaintModel(a))
       );
+  }
+
+  if (generationMode === "image_to_image") {
+    return models.filter(
+      (model) =>
+        model.family === "flux" &&
+        model.selectableForGenerate
+    );
   }
 
   return models.filter((model) => model.selectableForGenerate);

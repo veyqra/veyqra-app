@@ -1,6 +1,7 @@
 "use client";
 
 import { LoaderCircle, Play } from "lucide-react";
+import { useState } from "react";
 
 import {
   cancelGeneration,
@@ -11,14 +12,12 @@ import { uploadGenerationImage } from "@/services/uploads-api";
 import { useGenerateStore } from "@/stores/generate-store";
 import type { GenerationJob } from "@/types/generate";
 
-const POLL_INTERVAL_MS = 500;
+const POLL_INTERVAL_MS = 1_000;
 const POLL_TIMEOUT_MS = 15 * 60_000;
 
 export function GenerateButton() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const prompt = useGenerateStore((state) => state.prompt);
-  const isGenerating = useGenerateStore(
-    (state) => state.isGenerating
-  );
 
   const generationMode = useGenerateStore(
     (state) => state.generationMode
@@ -33,9 +32,6 @@ export function GenerateButton() {
     (state) => state.setUploadedInputFilename
   );
 
-  const setIsGenerating = useGenerateStore(
-    (state) => state.setIsGenerating
-  );
   const setPreviewImageUrl = useGenerateStore(
     (state) => state.setPreviewImageUrl
   );
@@ -44,18 +40,14 @@ export function GenerateButton() {
   const addHistoryImage = useGenerateStore(
     (state) => state.addHistoryImage
   );
-  const setGenerationError = useGenerateStore(  (state) => state.setGenerationError);
+  const setGenerationError = useGenerateStore(
+    (state) => state.setGenerationError
+  );
   const getRequest = useGenerateStore((state) => state.getRequest);
   const queue = useGenerateStore((state) => state.queue);
   const currentJob = queue.find(
     (job) => job.status === "queued" || job.status === "running"
   );
-  const statusLabel =
-    currentJob?.status === "queued"
-      ? "Queued..."
-      : currentJob?.status === "running"
-      ? `Generating ${currentJob.progress ?? 0}%`
-      : "Generate";
 
   const inputImageRequired =
     generationMode !== "text_to_image";
@@ -64,11 +56,11 @@ export function GenerateButton() {
 
   async function handleGenerate() {
     setGenerationError(null);
-    if (!prompt.trim() || isGenerating) {
+    if (!prompt.trim() || isSubmitting) {
       return;
     }
 
-    setIsGenerating(true);
+    setIsSubmitting(true);
 
     try {
       if (
@@ -108,10 +100,28 @@ export function GenerateButton() {
       });
 
       addJob(createdJob);
+      void monitorGeneration(createdJob.id);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Generation failed.";
+      setGenerationError(message);
+      console.error(
+        "Unable to generate image:",
+        error
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
-      const finishedJob = await pollGeneration(createdJob.id, (job) => {
-        updateJob(job.id, job);
-      });
+  async function monitorGeneration(jobId: string) {
+    try {
+      const finishedJob = await pollGeneration(
+        jobId,
+        (job) => updateJob(job.id, job)
+      );
 
       updateJob(finishedJob.id, finishedJob);
 
@@ -126,8 +136,7 @@ export function GenerateButton() {
 
       if (finishedJob.status === "failed") {
         const message =
-          finishedJob.error ??
-          "Generation failed.";
+          finishedJob.error ?? "Generation failed.";
         setGenerationError(message);
         console.error(message);
       }
@@ -135,14 +144,12 @@ export function GenerateButton() {
       const message =
         error instanceof Error
           ? error.message
-          : "Generation failed.";
+          : "Unable to monitor generation.";
       setGenerationError(message);
       console.error(
-        "Unable to generate image:",
+        `Unable to monitor generation ${jobId}:`,
         error
       );
-    } finally {
-      setIsGenerating(false);
     }
   }
 
@@ -162,8 +169,6 @@ export function GenerateButton() {
           : "Unable to cancel generation.";
       setGenerationError(message);
       console.error("Unable to cancel generation:", error);
-    } finally {
-      setIsGenerating(false);
     }
   }
 
@@ -171,14 +176,14 @@ export function GenerateButton() {
     <div className="space-y-2">
       <button
         type="button"
-        disabled={!prompt.trim() || isGenerating || inputImageMissing}
+        disabled={!prompt.trim() || isSubmitting || inputImageMissing}
         onClick={handleGenerate}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-4 font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isGenerating ? (
+        {isSubmitting ? (
           <>
             <LoaderCircle className="h-5 w-5 animate-spin" />
-            {statusLabel}
+            Adding to queue...
           </>
         ) : (
           <>
@@ -187,13 +192,13 @@ export function GenerateButton() {
           </>
         )}
       </button>
-      {isGenerating && currentJob && (
+      {currentJob && (
         <button
           type="button"
           onClick={() => void handleCancel()}
           className="w-full rounded-xl border border-red-900/60 bg-red-950/20 px-5 py-3 text-sm font-medium text-red-300 transition hover:bg-red-950/40"
         >
-          Cancel generation
+          Cancel latest job
         </button>
       )}
     </div>

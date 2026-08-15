@@ -49,6 +49,87 @@ class ComfyUIClient:
                 f"Unable to read ComfyUI queue: {exc}"
             ) from exc
 
+    async def cancel_prompt(self, prompt_id: str) -> bool:
+        queue = await self.get_queue()
+        running = queue.get("queue_running") or []
+        pending = queue.get("queue_pending") or []
+
+        if self._queue_contains_prompt(running, prompt_id):
+            await self.interrupt()
+            return True
+
+        if self._queue_contains_prompt(pending, prompt_id):
+            await self.delete_queued_prompt(prompt_id)
+
+            # The prompt can move from pending to running between the queue
+            # lookup and deletion. Interrupt only when that same prompt is
+            # now the active one, so unrelated jobs are not stopped.
+            refreshed_queue = await self.get_queue()
+            refreshed_running = (
+                refreshed_queue.get("queue_running") or []
+            )
+
+            if self._queue_contains_prompt(
+                refreshed_running,
+                prompt_id,
+            ):
+                await self.interrupt()
+
+            return True
+
+        return False
+
+    async def delete_queued_prompt(self, prompt_id: str) -> None:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/queue",
+                    json={"delete": [prompt_id]},
+                )
+                response.raise_for_status()
+
+        except httpx.HTTPError as exc:
+            raise ComfyUIError(
+                f"Unable to remove prompt from ComfyUI queue: {exc}"
+            ) from exc
+
+    async def interrupt(self) -> None:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/interrupt"
+                )
+                response.raise_for_status()
+
+        except httpx.HTTPError as exc:
+            raise ComfyUIError(
+                f"Unable to interrupt ComfyUI generation: {exc}"
+            ) from exc
+
+    @staticmethod
+    def _queue_contains_prompt(
+        entries: Any,
+        prompt_id: str,
+    ) -> bool:
+        if not isinstance(entries, list):
+            return False
+
+        for entry in entries:
+            if (
+                isinstance(entry, (list, tuple))
+                and len(entry) > 1
+                and str(entry[1]) == prompt_id
+            ):
+                return True
+
+            if (
+                isinstance(entry, dict)
+                and str(entry.get("prompt_id", "")) == prompt_id
+            ):
+                return True
+
+        return False
+
     async def queue_prompt(
         self,
         workflow: dict[str, Any],

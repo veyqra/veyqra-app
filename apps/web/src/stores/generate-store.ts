@@ -8,12 +8,16 @@ import type {
   GenerationMode,
   GenerationJob,
   GenerateRequest,
+  SamplerName,
+  SchedulerName,
 } from "@/types/generate";
+import type { ModelFamily } from "@/types/models";
 
 type GenerateStore = {
   prompt: string;
   negativePrompt: string;
   modelId: string;
+  modelFamily: ModelFamily | null;
   loraId: string;
   loraStrength: number;
   resolutionId: string;
@@ -21,6 +25,8 @@ type GenerateStore = {
   seedLocked: boolean;
   steps: number;
   guidance: number;
+  sampler: SamplerName;
+  scheduler: SchedulerName;
   batchSize: number;
   denoiseStrength: number;
   inputImageUrl: string | null;
@@ -32,13 +38,13 @@ type GenerateStore = {
   uploadedInputFilename: string | null;
   previewImageUrl: string | null;
   generationError: string | null;
-  isGenerating: boolean;
   queue: GenerationJob[];
   history: GeneratedImage[];
 
   setPrompt: (value: string) => void;
   setNegativePrompt: (value: string) => void;
   setModelId: (value: string) => void;
+  setModelFamily: (value: ModelFamily | null) => void;
   setLoraId: (value: string) => void;
   setLoraStrength: (value: number) => void;
   setResolutionId: (value: string) => void;
@@ -47,6 +53,8 @@ type GenerateStore = {
   randomizeSeed: () => void;
   setSteps: (value: number) => void;
   setGuidance: (value: number) => void;
+  setSampler: (value: SamplerName) => void;
+  setScheduler: (value: SchedulerName) => void;
   setBatchSize: (value: number) => void;
   setDenoiseStrength: (value: number) => void;
   setInputImageUrl: (value: string | null) => void;
@@ -63,7 +71,6 @@ type GenerateStore = {
   setUploadedInputFilename: (  value: string | null) => void;
   setPreviewImageUrl: (value: string | null) => void;
   setGenerationError: (  value: string | null) => void;
-  setIsGenerating: (value: boolean) => void;
   addJob: (job: GenerationJob) => void;
   updateJob: (
     id: string,
@@ -91,6 +98,7 @@ const initialSettings = {
   prompt: "",
   negativePrompt: "",
   modelId: "",
+  modelFamily: null,
   loraId: "none",
   loraStrength: 1,
   resolutionId: resolutionPresets[0]?.id ?? "",
@@ -98,6 +106,8 @@ const initialSettings = {
   seedLocked: false,
   steps: 28,
   guidance: 3.5,
+  sampler: "dpmpp_2m" as const,
+  scheduler: "karras" as const,
   batchSize: 1,
   denoiseStrength: 0.65,
   inputImageUrl: null,
@@ -109,7 +119,6 @@ const initialSettings = {
   uploadedInputFilename: null,
   previewImageUrl: null,
   generationError: null,
-  isGenerating: false,
 };
 
 export const useGenerateStore = create<GenerateStore>()(
@@ -123,6 +132,7 @@ export const useGenerateStore = create<GenerateStore>()(
       setPrompt: (prompt) => set({ prompt }),
   setNegativePrompt: (negativePrompt) => set({ negativePrompt }),
   setModelId: (modelId) => set({ modelId }),
+  setModelFamily: (modelFamily) => set({ modelFamily }),
   setLoraId: (loraId) => set({ loraId }),
   setLoraStrength: (loraStrength) => set({ loraStrength }),
   setResolutionId: (resolutionId) => set({ resolutionId }),
@@ -140,6 +150,8 @@ export const useGenerateStore = create<GenerateStore>()(
   }),
   setSteps: (steps) => set({ steps }),
   setGuidance: (guidance) => set({ guidance }),
+  setSampler: (sampler) => set({ sampler }),
+  setScheduler: (scheduler) => set({ scheduler }),
   setBatchSize: (batchSize) => set({ batchSize }),
   setDenoiseStrength: (denoiseStrength) =>  set({ denoiseStrength }),
   setInputImageUrl: (inputImageUrl) => set({ inputImageUrl }),
@@ -172,8 +184,6 @@ export const useGenerateStore = create<GenerateStore>()(
     set({ previewImageUrl }),
   setUploadedInputFilename: (uploadedInputFilename) =>  set({ uploadedInputFilename }),
   setGenerationError: (generationError) =>  set({ generationError }),
-  setIsGenerating: (isGenerating) => set({ isGenerating }),
-
   addJob: (job) =>
     set((state) => ({
       queue: [job, ...state.queue],
@@ -224,7 +234,10 @@ export const useGenerateStore = create<GenerateStore>()(
 
         return {
           prompt: state.prompt.trim(),
-          negativePrompt: "",
+          negativePrompt:
+            state.modelFamily === "sdxl"
+              ? state.negativePrompt.trim()
+              : "",
           mode: state.generationMode,
           inputImage:
             state.generationMode === "text_to_image"
@@ -240,10 +253,12 @@ export const useGenerateStore = create<GenerateStore>()(
           seed: Number.isNaN(parsedSeed) ? -1 : parsedSeed,
           steps: state.steps,
           guidance: state.guidance,
+          sampler: state.sampler,
+          scheduler: state.scheduler,
           denoiseStrength:
-            state.generationMode === "inpaint"
-              ? 1
-              : state.denoiseStrength,
+            state.generationMode === "image_to_image"
+              ? state.denoiseStrength
+              : 1,
           batchSize: state.batchSize,
         };
       },
@@ -262,6 +277,8 @@ export const useGenerateStore = create<GenerateStore>()(
         seedLocked: state.seedLocked,
         steps: state.steps,
         guidance: state.guidance,
+        sampler: state.sampler,
+        scheduler: state.scheduler,
         batchSize: state.batchSize,
         generationMode: state.generationMode,
         uploadedInputFilename: state.uploadedInputFilename,
@@ -273,8 +290,8 @@ export const useGenerateStore = create<GenerateStore>()(
         if (!state) {
           return;
         }
-        state.isGenerating = false;
         state.generationError = null;
+        state.modelFamily = null;
         state.inputImageUrl = null;
         state.previewImageUrl = null;
         state.queue = [];

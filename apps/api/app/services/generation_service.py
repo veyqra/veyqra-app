@@ -20,9 +20,12 @@ from app.schemas.generation import (
 from app.schemas.generation import GenerationMode
 from app.schemas.history import HistoryItemResponse
 from app.services.comfyui_client import ComfyUIClient
+from app.services.generation_workflow_builder import (
+    build_generation_workflow,
+)
 from app.services.history_service import history_service
+from app.services.model_service import model_service
 from app.services.storage_service import storage_service
-from app.services.workflow_builder import build_flux_workflow
 from app.schemas.job import PersistedGenerationJob
 from app.services.job_store import job_store
 
@@ -63,6 +66,13 @@ class GenerationService:
 
     async def resume_pending_jobs(self) -> None:
         with self._lock:
+            cancelled_prompt_ids = [
+                stored_job.comfy_prompt_id
+                for stored_job in self._jobs.values()
+                if stored_job.comfy_prompt_id
+                and stored_job.response.status
+                == GenerationStatus.CANCELLED
+            ]
             pending_job_ids = [
                 job_id
                 for job_id, stored_job in self._jobs.items()
@@ -74,6 +84,15 @@ class GenerationService:
                     GenerationStatus.CANCELLED,
                 }
             ]
+
+        for prompt_id in cancelled_prompt_ids:
+            try:
+                await comfy_client.cancel_prompt(prompt_id)
+            except Exception as error:
+                print(
+                    "Unable to clean up cancelled ComfyUI prompt "
+                    f"{prompt_id}: {error}"
+                )
 
         for job_id in pending_job_ids:
             self._start_progress_monitor(job_id)
@@ -166,9 +185,13 @@ class GenerationService:
                     )
                 )
 
-            built = build_flux_workflow(
+            selected_model = await model_service.get_model(
+                request.model_id
+            )
+
+            built = build_generation_workflow(
                 request=request,
-                model_filename=request.model_id,
+                model=selected_model,
                 input_image_filename=comfy_filename,
                 input_image_size=input_image_size,
             )
@@ -211,7 +234,7 @@ class GenerationService:
         updated_response = response.model_copy(
             update={
                 "status": GenerationStatus.QUEUED,
-                "progress": 5,
+                "progress": 0,
             }
         )
 
@@ -253,7 +276,6 @@ class GenerationService:
         if stored_job.response.status in {
             GenerationStatus.COMPLETED,
             GenerationStatus.FAILED,
-            GenerationStatus.CANCELLED,
         }:
             return stored_job.response
 
@@ -328,6 +350,11 @@ class GenerationService:
         }:
             return stored_job.response
 
+        if stored_job.comfy_prompt_id:
+            await comfy_client.cancel_prompt(
+                stored_job.comfy_prompt_id
+            )
+
         stored_job.response = (
             stored_job.response.model_copy(
                 update={
@@ -362,18 +389,19 @@ class GenerationService:
         history_entry = history.get(prompt_id)
 
         if not history_entry:
-            updated = current.model_copy(
-                update={
-                    "status": GenerationStatus.RUNNING,
-                    "progress": max(
-                        current.progress,
-                        10,
-                    ),
-                }
-            )
+            # A prompt without a history entry may still be waiting in the
+            # ComfyUI queue. The websocket progress event changes it to
+            # RUNNING once the sampler actually starts.
+            if (
+                current.status == GenerationStatus.QUEUED
+                and current.progress != 0
+            ):
+                current = current.model_copy(
+                    update={"progress": 0}
+                )
+                stored_job.response = current
 
-            stored_job.response = updated
-            return updated
+            return current
 
         #
         # ComfyUI error handling
@@ -696,7 +724,7 @@ class GenerationService:
         value: Any,
         maximum: Any,
     ) -> None:
-        if node_id not in {"8", "247"}:
+        if node_id not in {"1", "8", "247"}:
             return
 
         if not isinstance(value, (int, float)):

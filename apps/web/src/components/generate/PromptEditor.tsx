@@ -10,6 +10,12 @@ const textareaClassName =
 
 export function PromptEditor() {
   const prompt = useGenerateStore((state) => state.prompt);
+  const negativePrompt = useGenerateStore(
+    (state) => state.negativePrompt
+  );
+  const modelFamily = useGenerateStore(
+    (state) => state.modelFamily
+  );
   const generationMode = useGenerateStore(
     (state) => state.generationMode
   );
@@ -17,6 +23,9 @@ export function PromptEditor() {
     (state) => state.maskPrompt
   );
   const setPrompt = useGenerateStore((state) => state.setPrompt);
+  const setNegativePrompt = useGenerateStore(
+    (state) => state.setNegativePrompt
+  );
   const setMaskPrompt = useGenerateStore(
     (state) => state.setMaskPrompt
   );
@@ -67,6 +76,27 @@ export function PromptEditor() {
           {prompt.length} characters
         </span>
       </div>
+
+      {generationMode === "text_to_image" && modelFamily === "sdxl" && (
+        <label className="block text-sm font-medium text-zinc-300">
+          Negative prompt
+          <span className="ml-2 text-xs font-normal text-zinc-600">
+            Optional
+          </span>
+
+          <textarea
+            value={negativePrompt}
+            onChange={(event) => setNegativePrompt(event.target.value)}
+            rows={4}
+            placeholder="Describe elements that should not appear..."
+            className={textareaClassName}
+          />
+
+          <span className="mt-2 block text-right text-xs font-normal text-zinc-600">
+            {negativePrompt.length} characters
+          </span>
+        </label>
+      )}
 
       {generationMode === "inpaint" && (
         <label className="block text-sm font-medium text-zinc-300">

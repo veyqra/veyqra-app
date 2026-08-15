@@ -18,6 +18,19 @@ class GenerationMode(StrEnum):
     INPAINT = "inpaint"
 
 
+class SamplerName(StrEnum):
+    EULER = "euler"
+    EULER_ANCESTRAL = "euler_ancestral"
+    DPM_PP_2M = "dpmpp_2m"
+    DPM_PP_2M_SDE = "dpmpp_2m_sde"
+
+
+class SchedulerName(StrEnum):
+    NORMAL = "normal"
+    KARRAS = "karras"
+    EXPONENTIAL = "exponential"
+
+
 class GenerateRequest(BaseModel):
     prompt: str = Field(
         min_length=1,
@@ -51,6 +64,8 @@ class GenerateRequest(BaseModel):
         ge=0.0,
         le=30.0,
     )
+    sampler: SamplerName = SamplerName.DPM_PP_2M
+    scheduler: SchedulerName = SchedulerName.KARRAS
     batch_size: int = Field(
         default=1,
         ge=1,

@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-import json
 from copy import deepcopy
-from functools import lru_cache
-from pathlib import Path
 from random import randrange
-from typing import Any
-from dataclasses import dataclass
 
 from app.schemas.generation import GenerateRequest, GenerationMode
 from app.services.prompt_parser import (
@@ -15,85 +10,30 @@ from app.services.prompt_parser import (
     remove_mask_prompt,
 )
 from app.services.translation_service import translate_to_english
-
-API_ROOT = Path(__file__).resolve().parents[2]
-
-TEXT_TO_IMAGE_WORKFLOW_PATH = (
-    API_ROOT
-    / "workflows"
-    / "flux-text2image-api.json"
+from app.services.workflow_loader import (
+    load_flux_image_to_image_workflow,
+    load_flux_inpaint_workflow,
+    load_flux_text_to_image_workflow,
 )
-
-IMAGE_TO_IMAGE_WORKFLOW_PATH = (
-    API_ROOT
-    / "workflows"
-    / "flux-image2image-api.json"
-)
-
-INPAINT_WORKFLOW_PATH = (
-    API_ROOT
-    / "workflows"
-    / "inpaint_flux.json"
-)
+from app.services.workflow_types import BuiltWorkflow
 
 RESOLUTION_BY_ID = {
     "portrait": (768, 1152),
     "square": (1024, 1024),
     "landscape": (1152, 768),
+    "1024x1024": (1024, 1024),
+    "832x1216": (832, 1216),
+    "1216x832": (1216, 832),
+    "896x1152": (896, 1152),
+    "1152x896": (1152, 896),
 }
 
 
-@lru_cache
-def load_flux_text_to_image_workflow_template() -> dict[str, Any]:
-    if not TEXT_TO_IMAGE_WORKFLOW_PATH.exists():
-        raise FileNotFoundError(
-            f"Workflow template not found: "
-            f"{TEXT_TO_IMAGE_WORKFLOW_PATH}"
-        )
-
-    with TEXT_TO_IMAGE_WORKFLOW_PATH.open(
-        "r",
-        encoding="utf-8",
-    ) as file:
-        return json.load(file)
-
-
-@lru_cache
-def load_flux_image_to_image_workflow_template() -> dict[str, Any]:
-    if not IMAGE_TO_IMAGE_WORKFLOW_PATH.exists():
-        raise FileNotFoundError(
-            f"Workflow template not found: "
-            f"{IMAGE_TO_IMAGE_WORKFLOW_PATH}"
-        )
-
-    with IMAGE_TO_IMAGE_WORKFLOW_PATH.open(
-        "r",
-        encoding="utf-8",
-    ) as file:
-        return json.load(file)
-
-
-def load_flux_inpaint_workflow_template() -> dict[str, Any]:
-    if not INPAINT_WORKFLOW_PATH.exists():
-        raise FileNotFoundError(
-            f"Workflow template not found: "
-            f"{INPAINT_WORKFLOW_PATH}"
-        )
-
-    with INPAINT_WORKFLOW_PATH.open(
-        "r",
-        encoding="utf-8",
-    ) as file:
-        return json.load(file)
-
-
-@dataclass
-class BuiltWorkflow:
-    workflow: dict[str, Any]
-    seed: int
-    width: int
-    height: int
-    mask_prompt: str | None = None
+def resolve_resolution(resolution_id: str) -> tuple[int, int]:
+    return RESOLUTION_BY_ID.get(
+        resolution_id,
+        (1024, 1024),
+    )
 
 
 def build_flux_text_to_image_workflow(
@@ -106,13 +46,10 @@ def build_flux_text_to_image_workflow(
         model_filename
     )
 
-    workflow = deepcopy(load_flux_text_to_image_workflow_template())
+    workflow = deepcopy(load_flux_text_to_image_workflow())
     translated_prompt = translate_to_english(request.prompt).text
 
-    width, height = RESOLUTION_BY_ID.get(
-        request.resolution_id,
-        (1024, 1024),
-    )
+    width, height = resolve_resolution(request.resolution_id)
 
     #
     # Node 1
@@ -177,7 +114,10 @@ def build_flux_text_to_image_workflow(
     # Steps
     #
     workflow["7"]["inputs"]["steps"] = request.steps
-    workflow["7"]["inputs"]["denoise"] = getattr(request, "denoise_strength", 1.0)
+    # Text-to-image starts from an empty latent and therefore always needs
+    # the complete noise schedule. Denoise strength is only configurable for
+    # image-to-image.
+    workflow["7"]["inputs"]["denoise"] = 1.0
 
     #
     # Node 15
@@ -226,7 +166,7 @@ def build_flux_image_to_image_workflow(
     # Use a dedicated image->image workflow template
     validate_flux_text_to_image_model(model_filename)
 
-    workflow = deepcopy(load_flux_image_to_image_workflow_template())
+    workflow = deepcopy(load_flux_image_to_image_workflow())
     translated_prompt = translate_to_english(request.prompt).text
 
     if input_image_size is None:
@@ -368,7 +308,7 @@ def build_flux_inpaint_workflow(
 ) -> BuiltWorkflow:
     validate_flux_inpaint_model(model_filename)
 
-    workflow = deepcopy(load_flux_inpaint_workflow_template())
+    workflow = deepcopy(load_flux_inpaint_workflow())
     prompt_translation = translate_to_english(request.prompt)
     translated_prompt = prompt_translation.text
     translated_negative_prompt = translate_to_english(

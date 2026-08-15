@@ -15,6 +15,49 @@ from app.services.comfyui_client import ComfyUIClient
 settings = get_settings()
 
 
+def detect_model_family(filename: str) -> ModelFamily:
+    name = filename.lower()
+
+    sdxl_markers = (
+        "sdxl",
+        "sd_xl",
+        "juggernautxl",
+        "realvisxl",
+        "dreamshaperxl",
+    )
+
+    if any(marker in name for marker in sdxl_markers):
+        return ModelFamily.SDXL
+
+    if "flux" in name:
+        return ModelFamily.FLUX
+
+    if (
+        "sd15" in name
+        or "sd1.5" in name
+        or "sd_15" in name
+    ):
+        return ModelFamily.SD15
+
+    return ModelFamily.UNKNOWN
+
+
+def detect_lora_family(filename: str) -> ModelFamily:
+    name = filename.lower()
+
+    if (
+        "sdxl" in name
+        or "xl" in name
+        or "juggernaut" in name
+    ):
+        return ModelFamily.SDXL
+
+    if "flux" in name:
+        return ModelFamily.FLUX
+
+    return ModelFamily.UNKNOWN
+
+
 class ModelService:
     def __init__(self) -> None:
         self.client = ComfyUIClient(settings.comfyui_url)
@@ -31,16 +74,26 @@ class ModelService:
             input_name="unet_name",
         )
 
+    async def list_checkpoints(self) -> list[str]:
+        return await self._get_combo_values(
+            node_name="CheckpointLoaderSimple",
+            input_name="ckpt_name",
+        )
+
     async def get_catalog(self) -> ModelCatalogResponse:
         lora_filenames = await self.list_loras()
         model_filenames = await self.list_unets()
+        checkpoint_filenames = await self.list_checkpoints()
+        all_model_filenames = list(dict.fromkeys(
+            [*model_filenames, *checkpoint_filenames]
+        ))
 
         diffusion_models = [
             self._create_item(
                 filename=filename,
                 kind=ModelKind.DIFFUSION,
             )
-            for filename in model_filenames
+            for filename in all_model_filenames
         ]
 
         loras = [
@@ -54,6 +107,17 @@ class ModelService:
         return ModelCatalogResponse(
             diffusion_models=diffusion_models,
             loras=loras,
+        )
+
+    async def get_model(self, filename: str) -> ModelItemResponse:
+        catalog = await self.get_catalog()
+
+        for model in catalog.diffusion_models:
+            if model.filename == filename:
+                return model
+
+        raise ValueError(
+            f"Model '{filename}' was not found in the ComfyUI catalog."
         )
 
     async def _get_combo_values(
@@ -91,17 +155,25 @@ class ModelService:
         filename: str,
         kind: ModelKind,
     ) -> ModelItemResponse:
-        family = self._detect_family(filename)
+        family = (
+            detect_lora_family(filename)
+            if kind == ModelKind.LORA
+            else detect_model_family(filename)
+        )
 
         if kind == ModelKind.DIFFUSION:
-            capabilities = self._detect_model_capabilities(filename)
+            capabilities = (
+                [ModelCapability.TEXT_TO_IMAGE]
+                if family == ModelFamily.SDXL
+                else self._detect_model_capabilities(filename)
+            )
         else:
             capabilities = []
 
         selectable_for_generate = (
             kind == ModelKind.LORA
             or (
-                family == ModelFamily.FLUX
+                family in {ModelFamily.FLUX, ModelFamily.SDXL}
                 and ModelCapability.TEXT_TO_IMAGE in capabilities
             )
         )
@@ -141,22 +213,7 @@ class ModelService:
         self,
         filename: str,
     ) -> ModelFamily:
-        name = filename.lower()
-
-        if "flux" in name:
-            return ModelFamily.FLUX
-
-        if "sdxl" in name or "xl" in name:
-            return ModelFamily.SDXL
-
-        if (
-            "sd15" in name
-            or "sd1.5" in name
-            or "sd_15" in name
-        ):
-            return ModelFamily.SD15
-
-        return ModelFamily.UNKNOWN
+        return detect_model_family(filename)
 
     def _detect_model_capabilities(
         self,

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "nodes": [
+    {
+      "name": "ComfyUI-Grounding",
+      "repo": "https://github.com/PozzettiAndrea/ComfyUI-Grounding.git",
+      "ref": "main",
+      "required": true,
+      "install_by_default": true,
+      "provides": [
+        "GroundingMaskModelLoader",
+        "GroundingMaskDetector"
+      ]
+    },
+    {
+      "name": "ComfyUI-Manager",
+      "repo": "https://github.com/Comfy-Org/ComfyUI-Manager.git",
+      "ref": "main",
+      "required": false,
+      "install_by_default": false,
+      "provides": []
+    }
+  ]
+}
