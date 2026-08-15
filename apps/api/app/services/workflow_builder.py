@@ -157,7 +157,7 @@ def build_flux_workflow(
     # Output filename
     #
     workflow["18"]["inputs"]["filename_prefix"] = (
-        "Vyrra"
+        "Veyqra"
     )
 
     return BuiltWorkflow(

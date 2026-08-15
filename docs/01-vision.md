@@ -2,7 +2,7 @@
 
 ## Mission
 
-Vyrra soll die einfachste Möglichkeit werden, moderne Bild-KI lokal oder in der Cloud zu nutzen.
+Veyqra soll die einfachste Möglichkeit werden, moderne Bild-KI lokal oder in der Cloud zu nutzen.
 
 Der Benutzer soll sich auf Kreativität konzentrieren.
 
@@ -15,7 +15,7 @@ Nicht auf:
 - SSH
 - ComfyUI
 
-Diese Komplexität übernimmt Vyrra.
+Diese Komplexität übernimmt Veyqra.
 
 ---
 
@@ -83,7 +83,7 @@ Local GPU
 
 AWS
 
-Vyrra Cloud
+Veyqra Cloud
 
 ---
 

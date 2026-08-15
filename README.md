@@ -1,10 +1,10 @@
-# Vyrra
+# Veyqra
 
 > Create. Train. Deploy.
 
-Vyrra ist eine moderne AI-Plattform für Bildgenerierung, LoRA-Training und Modellverwaltung.
+Veyqra ist eine moderne AI-Plattform für Bildgenerierung, LoRA-Training und Modellverwaltung.
 
-Im Gegensatz zu klassischen ComfyUI-Frontends ist Vyrra eine vollständige Plattform, welche lokale GPUs, AWS und zukünftig Cloud-Backends unter einer einheitlichen Oberfläche vereint.
+Im Gegensatz zu klassischen ComfyUI-Frontends ist Veyqra eine vollständige Plattform, welche lokale GPUs, AWS und zukünftig Cloud-Backends unter einer einheitlichen Oberfläche vereint.
 
 ---
 
@@ -23,7 +23,7 @@ Der Benutzer entscheidet, wo gerechnet wird:
 
 - 💻 Local
 - ☁ My AWS
-- 🌍 Vyrra Cloud
+- 🌍 Veyqra Cloud
 
 Die Bedienung bleibt identisch.
 

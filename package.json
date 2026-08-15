@@ -1,8 +1,8 @@
 {
-  "name": "vyrra",
+  "name": "veyqra",
   "version": "0.1.0",
   "private": true,
-  "description": "Vyrra - AI Generation & Training Platform",
+  "description": "Veyqra - AI Generation & Training Platform",
   "workspaces": [
     "apps/*",
     "packages/*"

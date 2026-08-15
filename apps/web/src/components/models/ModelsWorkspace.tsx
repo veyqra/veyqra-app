@@ -47,7 +47,7 @@ export function ModelsWorkspace() {
       );
 
       setError(
-        "Vyrra could not load the model catalog from ComfyUI."
+        "Veyqra could not load the model catalog from ComfyUI."
       );
     } finally {
       setIsLoading(false);
@@ -77,7 +77,7 @@ export function ModelsWorkspace() {
           );
 
           setError(
-            "Vyrra could not load the model catalog from ComfyUI."
+            "Veyqra could not load the model catalog from ComfyUI."
           );
         } finally {
           if (!cancelled) {

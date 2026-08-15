@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="Backend API for the Vyrra AI workstation.",
+    description="Backend API for the Veyqra AI workstation.",
     lifespan=lifespan,
 )
 

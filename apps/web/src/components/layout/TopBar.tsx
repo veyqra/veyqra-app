@@ -13,11 +13,11 @@ import {
 const routeInfo = {
   "/dashboard": {
     title: "Dashboard",
-    subtitle: "Welcome back to Vyrra",
+    subtitle: "Welcome back to Veyqra",
   },
   "/generate": {
     title: "Generate",
-    subtitle: "Create images with Vyrra",
+    subtitle: "Create images with Veyqra",
   },
   "/train": {
     title: "Train",
@@ -41,7 +41,7 @@ const routeInfo = {
   },
   "/settings": {
     title: "Settings",
-    subtitle: "Configure your Vyrra workstation",
+    subtitle: "Configure your Veyqra workstation",
   },
 } as const;
 
@@ -54,7 +54,7 @@ export function TopBar() {
         pathname === route ||
         pathname.startsWith(`${route}/`)
     )?.[1] ?? {
-      title: "Vyrra",
+      title: "Veyqra",
       subtitle: "Create. Train. Deploy.",
     };
 

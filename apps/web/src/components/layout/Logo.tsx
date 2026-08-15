@@ -8,8 +8,8 @@ export function Logo() {
       className="flex items-center gap-2.5"
     >
       <Image
-        src="/vyrra-logo.png"
-        alt="Vyrra"
+        src="/veyqra-logo.png"
+        alt="Veyqra"
         width={48}
         height={48}
         priority
@@ -18,7 +18,7 @@ export function Logo() {
 
       <div className="min-w-0">
         <div className="text-base font-semibold tracking-tight text-white">
-          Vyrra
+          Veyqra
         </div>
 
         <div className="text-[11px] text-zinc-400">

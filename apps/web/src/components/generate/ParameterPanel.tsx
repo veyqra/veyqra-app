@@ -206,7 +206,12 @@ useEffect(() => {
   );
 
   useEffect(() => {
-    if (loraId === "none") {
+    if (
+      isLoading ||
+      !selectedModel ||
+      loraId === "none" ||
+      catalog.loras.length === 0
+    ) {
       return;
     }
 
@@ -218,6 +223,9 @@ useEffect(() => {
       setLoraId("none");
     }
   }, [
+    isLoading,
+    selectedModel,
+    catalog.loras.length,
     compatibleLoras,
     loraId,
     setLoraId,

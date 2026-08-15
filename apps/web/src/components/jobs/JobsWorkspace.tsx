@@ -54,7 +54,7 @@ export function JobsWorkspace() {
       );
 
       setError(
-        "Vyrra could not load generation jobs."
+        "Veyqra could not load generation jobs."
       );
     } finally {
       setIsLoading(false);
@@ -85,7 +85,7 @@ export function JobsWorkspace() {
         );
 
         setError(
-          "Vyrra could not load generation jobs."
+          "Veyqra could not load generation jobs."
         );
       } finally {
         if (!cancelled) {

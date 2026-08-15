@@ -335,7 +335,7 @@ class GenerationService:
 
         #
         # Copy finished ComfyUI image into
-        # Vyrra-owned persistent storage.
+        # Veyqra-owned persistent storage.
         #
         if stored_job.stored_image is None:
             stored_filename = (
@@ -421,7 +421,7 @@ class GenerationService:
                     "status": GenerationStatus.FAILED,
                     "error": (
                         "Generated image could not "
-                        "be stored by Vyrra."
+                        "be stored by Veyqra."
                     ),
                 }
             )

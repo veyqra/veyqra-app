@@ -9,6 +9,6 @@ router = APIRouter(prefix="/health", tags=["Health"])
 async def get_health() -> dict[str, object]:
     return {
         "status": "ok",
-        "service": "vyrra-api",
+        "service": "veyqra-api",
         "timestamp": datetime.now(UTC).isoformat(),
     }

@@ -15,7 +15,7 @@ export function DashboardHeader({
         <div>
           <div className="mb-3 flex items-center gap-2 text-sm font-medium text-violet-400">
             <Sparkles className="h-4 w-4" />
-            Vyrra AI Workstation
+            Veyqra AI Workstation
           </div>
 
           <h1 className="text-4xl font-bold tracking-tight">

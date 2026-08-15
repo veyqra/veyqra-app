@@ -51,7 +51,7 @@ export function DashboardWorkspace() {
         );
 
         setError(
-          "Vyrra could not load dashboard data."
+          "Veyqra could not load dashboard data."
         );
       } finally {
         setIsLoading(false);
@@ -84,7 +84,7 @@ export function DashboardWorkspace() {
         );
 
         setError(
-          "Vyrra could not load dashboard data."
+          "Veyqra could not load dashboard data."
         );
       } finally {
         if (!cancelled) {
@@ -131,7 +131,7 @@ export function DashboardWorkspace() {
           </h1>
 
           <p className="mt-2 text-sm text-zinc-500">
-            Vyrra workstation overview.
+            Veyqra workstation overview.
           </p>
         </div>
 
@@ -243,7 +243,7 @@ export function DashboardWorkspace() {
               </h2>
 
               <p className="mt-1 text-sm text-zinc-500">
-                Common Vyrra workflows.
+                Common Veyqra workflows.
               </p>
 
               <div className="mt-6 grid gap-3">

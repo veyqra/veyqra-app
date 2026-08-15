@@ -53,7 +53,7 @@ export function HistoryWorkspace() {
       );
 
       setError(
-        "Vyrra could not load generation history."
+        "Veyqra could not load generation history."
       );
     } finally {
       setIsLoading(false);
@@ -83,7 +83,7 @@ export function HistoryWorkspace() {
         );
 
         setError(
-          "Vyrra could not load generation history."
+          "Veyqra could not load generation history."
         );
       } finally {
         if (!cancelled) {

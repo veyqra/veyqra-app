@@ -1,6 +1,6 @@
 # Architektur
 
-Vyrra verwendet eine modulare Service-Architektur.
+Veyqra verwendet eine modulare Service-Architektur.
 
 ```
 

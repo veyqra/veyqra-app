@@ -11,7 +11,7 @@ export default function HistoryPage() {
           </h1>
 
           <p className="mt-2 text-zinc-400">
-            Browse and manage images generated with Vyrra.
+            Browse and manage images generated with Veyqra.
           </p>
         </header>
 

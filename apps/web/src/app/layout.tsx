@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vyrra",
+  title: "Veyqra",
   description: "Create. Train. Deploy.",
 };
 

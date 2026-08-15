@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for contributing to Vyrra.
+Thank you for contributing to Veyqra.
 
 ## Workflow
 
