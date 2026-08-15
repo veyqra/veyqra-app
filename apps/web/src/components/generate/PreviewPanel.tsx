@@ -102,7 +102,7 @@ export function PreviewPanel() {
         </div>
       </div>
 
-      <div className="relative flex min-h-[320px] items-center justify-center overflow-hidden rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 sm:min-h-[420px] lg:min-h-[620px]">
+      <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 sm:min-h-[420px] lg:min-h-[620px]">
         {previewImageUrl ? (
           <>
             <img

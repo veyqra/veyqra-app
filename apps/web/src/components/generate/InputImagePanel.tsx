@@ -165,7 +165,7 @@ export function InputImagePanel() {
 
       {previewUrl ? (
         <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
-          <div className="relative aspect-video bg-black">
+          <div className="relative min-h-[220px] bg-black sm:aspect-video sm:min-h-0">
             <img
               src={previewUrl}
               alt="Input preview"

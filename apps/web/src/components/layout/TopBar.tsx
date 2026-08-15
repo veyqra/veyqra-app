@@ -47,13 +47,11 @@ const routeInfo = {
 } as const;
 
 type TopBarProps = {
-  isNavigationOpen?: boolean;
-  onOpenNavigation?: () => void;
+  onOpenMobileMenu?: () => void;
 };
 
 export function TopBar({
-  isNavigationOpen = false,
-  onOpenNavigation,
+  onOpenMobileMenu,
 }: TopBarProps) {
   const pathname = usePathname();
 
@@ -72,10 +70,9 @@ export function TopBar({
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
-          onClick={onOpenNavigation}
+          onClick={onOpenMobileMenu}
           aria-label="Open navigation"
           aria-controls="mobile-navigation"
-          aria-expanded={isNavigationOpen}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-violet-500 hover:bg-zinc-800 lg:hidden"
         >
           <Menu size={20} />

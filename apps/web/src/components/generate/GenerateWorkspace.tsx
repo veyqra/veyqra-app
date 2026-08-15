@@ -34,7 +34,9 @@ export function GenerateWorkspace() {
         <div className="rounded-xl border border-red-900/60 bg-red-950/20 px-4 py-3 text-sm text-red-300">
           <div className="flex items-start gap-3">
             <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-            <div className="min-w-0 flex-1">{generationError}</div>
+            <div className="min-w-0 flex-1 break-words">
+              {generationError}
+            </div>
             <button
               type="button"
               onClick={() => setGenerationError(null)}
