@@ -2,6 +2,7 @@
 
 import { MessageSquareText } from "lucide-react";
 
+import { VoiceInputButton } from "@/components/ui/VoiceInputButton";
 import { useGenerateStore } from "@/stores/generate-store";
 
 const textareaClassName =
@@ -9,13 +10,26 @@ const textareaClassName =
 
 export function PromptEditor() {
   const prompt = useGenerateStore((state) => state.prompt);
-  const negativePrompt = useGenerateStore(
-    (state) => state.negativePrompt
+  const generationMode = useGenerateStore(
+    (state) => state.generationMode
+  );
+  const maskPrompt = useGenerateStore(
+    (state) => state.maskPrompt
   );
   const setPrompt = useGenerateStore((state) => state.setPrompt);
-  const setNegativePrompt = useGenerateStore(
-    (state) => state.setNegativePrompt
+  const setMaskPrompt = useGenerateStore(
+    (state) => state.setMaskPrompt
   );
+
+  function handleVoiceTranscript(transcript: string) {
+    const current = prompt.trim();
+
+    setPrompt(
+      current
+        ? `${current} ${transcript}`
+        : transcript
+    );
+  }
 
   return (
     <section className="space-y-5">
@@ -25,35 +39,55 @@ export function PromptEditor() {
         <h3 className="font-semibold">Prompt</h3>
       </div>
 
-      <label className="block text-sm font-medium text-zinc-300">
-        Positive prompt
+      <div className="text-sm font-medium text-zinc-300">
+        <div className="flex items-center justify-between gap-3">
+          <label htmlFor="positive-prompt">
+            Positive prompt
+          </label>
+
+          <VoiceInputButton
+            onTranscript={handleVoiceTranscript}
+          />
+        </div>
 
         <textarea
+          id="positive-prompt"
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           rows={7}
-          placeholder="Describe the image you want to generate..."
+          placeholder={
+            generationMode === "inpaint"
+              ? "Describe how the selected area should change..."
+              : "Describe the image you want to generate..."
+          }
           className={textareaClassName}
         />
 
         <span className="mt-2 block text-right text-xs text-zinc-600">
           {prompt.length} characters
         </span>
-      </label>
+      </div>
 
-      <label className="block text-sm font-medium text-zinc-300">
-        Negative prompt
+      {generationMode === "inpaint" && (
+        <label className="block text-sm font-medium text-zinc-300">
+          Mask prompt
+          <span className="ml-2 text-xs font-normal text-zinc-600">
+            Optional
+          </span>
 
-        <textarea
-          value={negativePrompt}
-          onChange={(event) =>
-            setNegativePrompt(event.target.value)
-          }
-          rows={4}
-          placeholder="Elements that should not appear..."
-          className={textareaClassName}
-        />
-      </label>
+          <input
+            value={maskPrompt}
+            onChange={(event) => setMaskPrompt(event.target.value)}
+            placeholder="e.g. red shirt, face, background"
+            className={textareaClassName}
+          />
+
+          <span className="mt-2 block text-xs font-normal leading-5 text-zinc-600">
+            Leave empty to detect the mask area automatically from
+            the positive prompt.
+          </span>
+        </label>
+      )}
     </section>
   );
 }

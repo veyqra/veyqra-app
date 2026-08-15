@@ -1,29 +1,84 @@
 "use client";
 
-import { History, ImageIcon } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  History,
+  ImageIcon,
+} from "lucide-react";
 
 import { useGenerateStore } from "@/stores/generate-store";
 
 export function HistoryPanel() {
   const history = useGenerateStore((state) => state.history);
+  const previewImageUrl = useGenerateStore(
+    (state) => state.previewImageUrl
+  );
   const setPreviewImageUrl = useGenerateStore(
     (state) => state.setPreviewImageUrl
   );
 
+  const currentHistoryIndex = history.findIndex(
+    (image) => image.imageUrl === previewImageUrl
+  );
+
+  function showHistoryImage(offset: number) {
+    if (history.length === 0) {
+      return;
+    }
+
+    const activeIndex =
+      currentHistoryIndex === -1 ? 0 : currentHistoryIndex;
+    const nextIndex =
+      (activeIndex + offset + history.length) % history.length;
+
+    setPreviewImageUrl(history[nextIndex].imageUrl);
+  }
+
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-      <div className="mb-5 flex items-center gap-2">
-        <History className="h-5 w-5 text-violet-400" />
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <History className="h-5 w-5 text-violet-400" />
 
-        <div>
-          <h2 className="text-xl font-semibold">
-            Generation history
-          </h2>
+          <div>
+            <h2 className="text-xl font-semibold">
+              Generation history
+            </h2>
 
-          <p className="mt-1 text-sm text-zinc-500">
-            Recently generated images in this session.
-          </p>
+            <p className="mt-1 text-sm text-zinc-500">
+              Recently generated images in this session.
+            </p>
+          </div>
         </div>
+
+        {history.length > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => showHistoryImage(-1)}
+              aria-label="Show previous history image"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-300 transition hover:border-violet-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+
+            <span className="min-w-12 text-center text-xs text-zinc-500">
+              {currentHistoryIndex === -1
+                ? `– / ${history.length}`
+                : `${currentHistoryIndex + 1} / ${history.length}`}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => showHistoryImage(1)}
+              aria-label="Show next history image"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-300 transition hover:border-violet-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {history.length === 0 ? (
@@ -40,7 +95,12 @@ export function HistoryPanel() {
               key={image.id}
               type="button"
               onClick={() => setPreviewImageUrl(image.imageUrl)}
-              className="group overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 text-left transition hover:border-violet-500"
+              aria-pressed={image.imageUrl === previewImageUrl}
+              className={`group overflow-hidden rounded-xl border bg-zinc-950 text-left transition hover:border-violet-500 ${
+                image.imageUrl === previewImageUrl
+                  ? "border-violet-500 ring-2 ring-violet-500/30"
+                  : "border-zinc-800"
+              }`}
             >
               <div className="aspect-square overflow-hidden bg-zinc-900">
                 <img

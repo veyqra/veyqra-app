@@ -61,7 +61,10 @@ class GenerateRequest(BaseModel):
         ge=0.0,
         le=1.0,
     )
-    mask_image: str | None = None
+    # mask_image removed; automatic mask generation uses mask_prompt
+    mask_prompt: str = Field(default="", max_length=1000)
+    mask_confidence: float = Field(default=0.3, ge=0.0, le=1.0)
+    mask_expand: int = Field(default=40, ge=0, le=128)
 
     @field_validator("prompt")
     @classmethod
@@ -90,11 +93,10 @@ class GenerateRequest(BaseModel):
             )
         if (
             self.mode == GenerationMode.INPAINT
-            and not self.mask_image
+            and not self.mask_prompt.strip()
         ):
-            raise ValueError(
-                "A mask image is required for inpainting."
-            )
+            # mask_prompt may be empty; it can be auto-extracted from `prompt`.
+            pass
 
         return self
 
@@ -103,6 +105,7 @@ class GeneratedImageResponse(BaseModel):
     id: str
     prompt: str
     image_url: str
+    mask_preview_url: str | None = None
     model_name: str
     width: int
     height: int
@@ -117,6 +120,8 @@ class GenerationJobResponse(BaseModel):
     progress: int = Field(ge=0, le=100)
     created_at: datetime
     error: str | None = None
+    mask_prompt: str | None = None
+    mask_preview_url: str | None = None
     image: GeneratedImageResponse | None = None
 
 

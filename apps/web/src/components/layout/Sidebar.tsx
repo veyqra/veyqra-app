@@ -65,18 +65,22 @@ const navigation = [
   },
 ];
 
-export function Sidebar() {
+type SidebarProps = {
+  onNavigate?: () => void;
+};
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-screen w-72 flex-col border-r border-zinc-800 bg-zinc-950">
+    <aside className="flex h-dvh w-72 flex-col border-r border-zinc-800 bg-zinc-950">
       {/* Logo */}
       <div className="border-b border-zinc-800 px-5 py-5">
         <Logo />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
         <div className="space-y-2">
           {navigation.map((item) => {
             const Icon = item.icon;
@@ -106,6 +110,7 @@ export function Sidebar() {
               <Link
                 key={item.title}
                 href={item.href}
+                onClick={onNavigate}
                 className={`group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
                   active
                     ? "bg-violet-600 text-white shadow-lg shadow-violet-600/25"

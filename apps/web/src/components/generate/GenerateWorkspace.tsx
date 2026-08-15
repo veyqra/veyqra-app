@@ -10,7 +10,6 @@ import { PreviewPanel } from "./PreviewPanel";
 import { PromptEditor } from "./PromptEditor";
 import { GenerationModePanel } from "./GenerationModePanel";
 import { InputImagePanel } from "./InputImagePanel";
-import { MaskImagePanel } from "./MaskImagePanel";
 import { QueuePanel } from "./QueuePanel";
 
 export function GenerateWorkspace() {
@@ -69,8 +68,8 @@ export function GenerateWorkspace() {
           </div>
         </div>
       )}
-      <div className="grid items-start gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-        <aside className="space-y-7 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+      <div className="grid items-start gap-4 lg:gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <aside className="space-y-5 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5 lg:space-y-7 lg:p-6">
           <div>
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-violet-400" />
@@ -86,7 +85,6 @@ export function GenerateWorkspace() {
 
           <GenerationModePanel />
           <InputImagePanel />
-          <MaskImagePanel />
           <PromptEditor />
 
           <div className="border-t border-zinc-800" />

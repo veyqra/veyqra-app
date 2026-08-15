@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+import json
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit, urlunsplit
 from pathlib import Path
 
 import httpx
+import websockets
 
 
 class ComfyUIError(RuntimeError):
@@ -82,6 +85,47 @@ class ComfyUIClient:
         except httpx.HTTPError as exc:
             raise ComfyUIError(
                 f"Unable to read ComfyUI history: {exc}"
+            ) from exc
+
+    async def listen_events(
+        self,
+        client_id: str,
+    ) -> AsyncIterator[dict[str, Any]]:
+        parts = urlsplit(self.base_url)
+        websocket_url = urlunsplit(
+            (
+                "wss" if parts.scheme == "https" else "ws",
+                parts.netloc,
+                "/ws",
+                urlencode({"clientId": client_id}),
+                "",
+            )
+        )
+
+        try:
+            async with websockets.connect(
+                websocket_url,
+                open_timeout=15,
+                ping_interval=20,
+                ping_timeout=20,
+            ) as websocket:
+                async for raw_message in websocket:
+                    if not isinstance(raw_message, str):
+                        continue
+
+                    message = json.loads(raw_message)
+
+                    if isinstance(message, dict):
+                        yield message
+
+        except (
+            OSError,
+            ValueError,
+            json.JSONDecodeError,
+            websockets.WebSocketException,
+        ) as exc:
+            raise ComfyUIError(
+                f"Unable to monitor ComfyUI progress: {exc}"
             ) from exc
 
     def image_url(

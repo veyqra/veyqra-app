@@ -42,8 +42,15 @@ export async function apiRequest<T>(
       details = await response.text();
     }
 
+    const detail =
+      details && typeof details === "object" && "detail" in details
+        ? String((details as any).detail)
+        : null;
+
     throw new ApiError(
-      `API request failed with status ${response.status}`,
+      detail
+        ? `API ${response.status}: ${detail}`
+        : `API request failed with status ${response.status}`,
       response.status,
       details
     );

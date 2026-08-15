@@ -9,6 +9,7 @@ type ApiGeneratedImage = {
   id: string;
   prompt: string;
   image_url: string;
+  mask_preview_url: string | null;
   model_name: string;
   width: number;
   height: number;
@@ -23,6 +24,8 @@ type ApiGenerationJob = {
   progress: number;
   created_at: string;
   error: string | null;
+  mask_prompt: string | null;
+  mask_preview_url: string | null;
   image: ApiGeneratedImage | null;
 };
 
@@ -51,6 +54,7 @@ function toGeneratedImage(
     id: image.id,
     prompt: image.prompt,
     imageUrl: image.image_url,
+    maskPreviewUrl: image.mask_preview_url ?? null,
     modelName: image.model_name,
     width: image.width,
     height: image.height,
@@ -69,6 +73,8 @@ function toGenerationJob(
     progress: job.progress,
     createdAt: job.created_at,
     error: job.error,
+    maskPrompt: job.mask_prompt ?? null,
+    maskPreviewUrl: job.mask_preview_url ?? null,
     image: job.image
       ? toGeneratedImage(job.image)
       : null,

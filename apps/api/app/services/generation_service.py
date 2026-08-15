@@ -8,6 +8,8 @@ from typing import Any
 from uuid import uuid4
 import asyncio
 
+from PIL import Image, UnidentifiedImageError
+
 from app.core.config import get_settings
 from app.schemas.generation import (
     GeneratedImageResponse,
@@ -43,12 +45,15 @@ class StoredGenerationJob:
     comfy_prompt_id: str | None = None
     history_saved: bool = False
     actual_seed: int | None = None
+    output_width: int | None = None
+    output_height: int | None = None
     stored_image: GeneratedImageResponse | None = None
 
 
 class GenerationService:
     def __init__(self) -> None:
         self._jobs: dict[str, StoredGenerationJob] = {}
+        self._progress_tasks: dict[str, asyncio.Task[None]] = {}
         self._lock = Lock()
 
         for persisted in job_store.list_jobs():
@@ -57,6 +62,22 @@ class GenerationService:
             )
 
     async def resume_pending_jobs(self) -> None:
+        with self._lock:
+            pending_job_ids = [
+                job_id
+                for job_id, stored_job in self._jobs.items()
+                if stored_job.comfy_prompt_id
+                and stored_job.response.status
+                not in {
+                    GenerationStatus.COMPLETED,
+                    GenerationStatus.FAILED,
+                    GenerationStatus.CANCELLED,
+                }
+            ]
+
+        for job_id in pending_job_ids:
+            self._start_progress_monitor(job_id)
+
         while True:
             with self._lock:
                 job_ids = [
@@ -114,25 +135,29 @@ class GenerationService:
             stored_job,
         )
 
-        # If an input image is provided for image-to-image, ensure it exists
-        # and upload it to ComfyUI so the workflow can reference it.
+        # If an input image is provided for image-to-image or inpaint,
+        # ensure it exists and upload it to ComfyUI so the workflow can reference it.
         comfy_filename: str | None = None
+        input_image_size: tuple[int, int] | None = None
 
         try:
-            if request.mode == GenerationMode.IMAGE_TO_IMAGE:
+            if request.mode in {
+                GenerationMode.IMAGE_TO_IMAGE,
+                GenerationMode.INPAINT,
+            }:
                 if not request.input_image:
                     raise ValueError("Input image is required.")
 
-                input_path = (
-                    UPLOAD_DIR
-                    / request.input_image
-                )
+                input_path = UPLOAD_DIR / request.input_image
 
                 if not input_path.exists():
                     raise ValueError(
-                        f"Input image does not exist: "
-                        f"{request.input_image}"
+                        "Input image does not exist."
                     )
+
+                input_image_size = self._read_image_size(
+                    input_path
+                )
 
                 comfy_filename = (
                     await comfy_client.upload_image(
@@ -141,36 +166,11 @@ class GenerationService:
                     )
                 )
 
-            if request.mode == GenerationMode.INPAINT:
-                # Ensure both input and mask exist on disk before proceeding.
-                if not request.input_image:
-                    raise ValueError("Input image is required.")
-
-                if not request.mask_image:
-                    raise ValueError("Mask image is required.")
-
-                input_path = UPLOAD_DIR / request.input_image
-                mask_path = UPLOAD_DIR / request.mask_image
-
-                if not input_path.exists():
-                    raise ValueError(
-                        "Input image does not exist."
-                    )
-
-                if not mask_path.exists():
-                    raise ValueError(
-                        "Mask image does not exist."
-                    )
-
-                # Inpainting isn't implemented yet; surface a clear error.
-                raise ValueError(
-                    "Inpainting is not implemented yet."
-                )
-
             built = build_flux_workflow(
                 request=request,
                 model_filename=request.model_id,
                 input_image_filename=comfy_filename,
+                input_image_size=input_image_size,
             )
         except Exception as error:
             failed_response = response.model_copy(
@@ -188,7 +188,15 @@ class GenerationService:
 
             raise
 
+        response = response.model_copy(
+            update={
+                "mask_prompt": built.mask_prompt,
+            }
+        )
+        stored_job.response = response
         stored_job.actual_seed = built.seed
+        stored_job.output_width = built.width
+        stored_job.output_height = built.height
         
         self._persist_job(
             job_id,
@@ -215,6 +223,8 @@ class GenerationService:
             job_id,
             stored_job,
         )
+
+        self._start_progress_monitor(job_id)
 
         return updated_response
 
@@ -334,6 +344,8 @@ class GenerationService:
             stored_job,
         )
 
+        self._stop_progress_monitor(job_id)
+
         return stored_job.response
 
     async def _apply_history_to_job(
@@ -355,7 +367,7 @@ class GenerationService:
                     "status": GenerationStatus.RUNNING,
                     "progress": max(
                         current.progress,
-                        35,
+                        10,
                     ),
                 }
             )
@@ -396,9 +408,47 @@ class GenerationService:
             stored_job.response = updated
             return updated
 
-        image_info = self._extract_first_image(
-            history_entry
-        )
+        mask_preview_url = current.mask_preview_url
+
+        if (
+            stored_job.request.mode == GenerationMode.INPAINT
+            and not mask_preview_url
+        ):
+            mask_image_info = self._extract_node_image(
+                history_entry,
+                "22",
+            )
+
+            if mask_image_info is not None:
+                mask_filename = (
+                    await storage_service.store_comfyui_image(
+                        filename=mask_image_info["filename"],
+                        subfolder=mask_image_info.get(
+                            "subfolder",
+                            "",
+                        ),
+                        folder_type=mask_image_info.get(
+                            "type",
+                            "temp",
+                        ),
+                    )
+                )
+
+                mask_preview_url = (
+                    f"{settings.public_api_url}"
+                    f"{settings.api_prefix}"
+                    f"/storage/history/{mask_filename}"
+                )
+
+        if stored_job.request.mode == GenerationMode.INPAINT:
+            image_info = self._extract_node_image(
+                history_entry,
+                "13",
+            )
+        else:
+            image_info = self._extract_first_image(
+                history_entry
+            )
 
         if image_info is None:
             updated = current.model_copy(
@@ -408,6 +458,7 @@ class GenerationService:
                         current.progress,
                         80,
                     ),
+                    "mask_preview_url": mask_preview_url,
                 }
             )
 
@@ -443,12 +494,19 @@ class GenerationService:
                 id=str(uuid4()),
                 prompt=current.prompt,
                 image_url=image_url,
+                mask_preview_url=mask_preview_url,
                 model_name=current.model_name,
-                width=self._get_width(
-                    stored_job.request.resolution_id
+                width=(
+                    stored_job.output_width
+                    or self._get_width(
+                        stored_job.request.resolution_id
+                    )
                 ),
-                height=self._get_height(
-                    stored_job.request.resolution_id
+                height=(
+                    stored_job.output_height
+                    or self._get_height(
+                        stored_job.request.resolution_id
+                    )
                 ),
                 created_at=datetime.now(UTC),
             )
@@ -514,6 +572,7 @@ class GenerationService:
             update={
                 "status": GenerationStatus.COMPLETED,
                 "progress": 100,
+                "mask_preview_url": mask_preview_url,
                 "image": image,
             }
         )
@@ -541,6 +600,162 @@ class GenerationService:
 
         return None
 
+    def _start_progress_monitor(
+        self,
+        job_id: str,
+    ) -> None:
+        existing = self._progress_tasks.get(job_id)
+
+        if existing is not None and not existing.done():
+            return
+
+        task = asyncio.create_task(
+            self._monitor_comfyui_progress(job_id)
+        )
+        self._progress_tasks[job_id] = task
+
+        def remove_completed_task(
+            completed_task: asyncio.Task[None],
+        ) -> None:
+            if self._progress_tasks.get(job_id) is completed_task:
+                self._progress_tasks.pop(job_id, None)
+
+        task.add_done_callback(remove_completed_task)
+
+    def _stop_progress_monitor(
+        self,
+        job_id: str,
+    ) -> None:
+        task = self._progress_tasks.pop(job_id, None)
+
+        if task is not None and not task.done():
+            task.cancel()
+
+    async def _monitor_comfyui_progress(
+        self,
+        job_id: str,
+    ) -> None:
+        with self._lock:
+            stored_job = self._jobs.get(job_id)
+            prompt_id = (
+                stored_job.comfy_prompt_id
+                if stored_job is not None
+                else None
+            )
+
+        if not prompt_id:
+            return
+
+        try:
+            async for message in comfy_client.listen_events(job_id):
+                message_type = message.get("type")
+                data = message.get("data", {})
+
+                if not isinstance(data, dict):
+                    continue
+
+                if message_type == "progress":
+                    self._apply_comfyui_progress(
+                        job_id=job_id,
+                        prompt_id=str(data.get("prompt_id", "")),
+                        node_id=str(data.get("node", "")),
+                        value=data.get("value"),
+                        maximum=data.get("max"),
+                    )
+
+                if (
+                    message_type == "executing"
+                    and data.get("node") is None
+                    and data.get("prompt_id") == prompt_id
+                ):
+                    return
+
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            print(
+                f"Unable to monitor generation progress "
+                f"for {job_id}: {error}"
+            )
+
+    def _apply_comfyui_progress(
+        self,
+        job_id: str,
+        prompt_id: str,
+        node_id: str,
+        value: Any,
+        maximum: Any,
+    ) -> None:
+        if node_id not in {"8", "247"}:
+            return
+
+        if not isinstance(value, (int, float)):
+            return
+
+        if not isinstance(maximum, (int, float)) or maximum <= 0:
+            return
+
+        with self._lock:
+            stored_job = self._jobs.get(job_id)
+
+            if stored_job is None:
+                return
+
+            if stored_job.comfy_prompt_id != prompt_id:
+                return
+
+            if stored_job.response.status in {
+                GenerationStatus.COMPLETED,
+                GenerationStatus.FAILED,
+                GenerationStatus.CANCELLED,
+            }:
+                return
+
+            sampler_progress = 10 + round(
+                min(max(value / maximum, 0), 1) * 85
+            )
+            progress = max(
+                stored_job.response.progress,
+                sampler_progress,
+            )
+
+            if (
+                stored_job.response.status == GenerationStatus.RUNNING
+                and stored_job.response.progress == progress
+            ):
+                return
+
+            stored_job.response = stored_job.response.model_copy(
+                update={
+                    "status": GenerationStatus.RUNNING,
+                    "progress": progress,
+                }
+            )
+
+        self._persist_job(job_id, stored_job)
+
+    def _extract_node_image(
+        self,
+        history_entry: dict[str, Any],
+        node_id: str,
+    ) -> dict[str, Any] | None:
+        outputs = history_entry.get(
+            "outputs",
+            {},
+        )
+
+        node_output = outputs.get(node_id)
+
+        if not node_output:
+            return None
+
+        images = node_output.get("images")
+
+        if not images:
+            return None
+
+        return images[0]
+
     def _get_width(
         self,
         resolution_id: str,
@@ -552,6 +767,26 @@ class GenerationService:
             return 1152
 
         return 1024
+
+    def _read_image_size(
+        self,
+        image_path: Path,
+    ) -> tuple[int, int]:
+        try:
+            with Image.open(image_path) as image:
+                width, height = image.size
+                image.verify()
+        except (OSError, UnidentifiedImageError) as error:
+            raise ValueError(
+                "Input image is not a valid PNG, JPEG, or WebP image."
+            ) from error
+
+        if width <= 0 or height <= 0:
+            raise ValueError(
+                "Input image dimensions must be positive."
+            )
+
+        return width, height
 
     def _get_height(
         self,
@@ -581,7 +816,11 @@ class GenerationService:
             created_at=response.created_at,
             comfy_prompt_id=stored_job.comfy_prompt_id,
             actual_seed=stored_job.actual_seed,
+            output_width=stored_job.output_width,
+            output_height=stored_job.output_height,
             history_saved=stored_job.history_saved,
+            mask_prompt=response.mask_prompt,
+            mask_preview_url=response.mask_preview_url,
             image=response.image,
             error=response.error,
         )
@@ -605,6 +844,8 @@ class GenerationService:
             status=persisted.status,
             progress=persisted.progress,
             created_at=persisted.created_at,
+            mask_prompt=persisted.mask_prompt,
+            mask_preview_url=persisted.mask_preview_url,
             image=persisted.image,
             error=persisted.error,
         )
@@ -615,6 +856,8 @@ class GenerationService:
             comfy_prompt_id=persisted.comfy_prompt_id,
             history_saved=persisted.history_saved,
             actual_seed=persisted.actual_seed,
+            output_width=persisted.output_width,
+            output_height=persisted.output_height,
             stored_image=persisted.image,
         )
 

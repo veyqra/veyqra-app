@@ -17,7 +17,9 @@ type ApiGenerateRequest = {
   resolution_id: string;
   seed: number;
   denoise_strength: number;
-  mask_image?: string | null;
+  mask_prompt?: string;
+  mask_confidence?: number;
+  mask_expand?: number;
   steps: number;
   guidance: number;
   batch_size: number;
@@ -27,6 +29,7 @@ type ApiGeneratedImage = {
   id: string;
   prompt: string;
   image_url: string;
+  mask_preview_url: string | null;
   model_name: string;
   width: number;
   height: number;
@@ -41,6 +44,8 @@ type ApiGenerationJob = {
   progress: number;
   created_at: string;
   error: string | null;
+  mask_prompt: string | null;
+  mask_preview_url: string | null;
   image: ApiGeneratedImage | null;
 };
 
@@ -54,7 +59,9 @@ function toApiRequest(request: GenerateRequest): ApiGenerateRequest {
     negative_prompt: request.negativePrompt,
     mode: request.mode,
     input_image: request.inputImage,
-      mask_image: request.maskImage,
+    mask_prompt: request.maskPrompt,
+    mask_confidence: request.maskConfidence,
+    mask_expand: request.maskExpand,
     model_id: request.modelId,
     lora_id: request.loraId,
     lora_strength: request.loraStrength,
@@ -74,6 +81,7 @@ function toGeneratedImage(
     id: image.id,
     prompt: image.prompt,
     imageUrl: image.image_url,
+    maskPreviewUrl: image.mask_preview_url ?? null,
     modelName: image.model_name,
     width: image.width,
     height: image.height,
@@ -90,6 +98,8 @@ function toGenerationJob(job: ApiGenerationJob): GenerationJob {
     progress: job.progress,
     createdAt: job.created_at,
     error: job.error ?? undefined,
+    maskPrompt: job.mask_prompt ?? null,
+    maskPreviewUrl: job.mask_preview_url ?? null,
     image: job.image ? toGeneratedImage(job.image) : undefined,
   };
 }

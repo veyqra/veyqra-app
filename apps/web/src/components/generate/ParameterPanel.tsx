@@ -47,6 +47,8 @@ export function ParameterPanel() {
   const batchSize = useGenerateStore((state) => state.batchSize);
   const seedLocked = useGenerateStore((state) => state.seedLocked);
   const generationMode = useGenerateStore((state) => state.generationMode);
+  const preservesInputResolution =
+    generationMode !== "text_to_image";
   const denoiseStrength = useGenerateStore((state) => state.denoiseStrength);
   const setDenoiseStrength = useGenerateStore((state) => state.setDenoiseStrength);
 
@@ -100,19 +102,19 @@ export function ParameterPanel() {
 
       setCatalog(data);
 
-      const selectableModels =
-          data.diffusionModels.filter(
-            (model) => model.selectableForGenerate
-          );
+      const selectableModels = getSelectableModels(
+        data.diffusionModels,
+        generationMode
+      );
 
-        if (
-          selectableModels.length > 0 &&
-          !selectableModels.some(
-            (model) => model.filename === modelId
-          )
-        ) {
-          setModelId(selectableModels[0].filename);
-        }
+      if (
+        selectableModels.length > 0 &&
+        !selectableModels.some(
+          (model) => model.filename === modelId
+        )
+      ) {
+        setModelId(selectableModels[0].filename);
+      }
     } catch (loadError) {
       console.error(
         "Unable to load ComfyUI model catalog:",
@@ -123,7 +125,7 @@ export function ParameterPanel() {
     } finally {
       setIsLoading(false);
     }
-  }, [modelId, setModelId]);
+  }, [modelId, generationMode, setModelId]);
 
 useEffect(() => {
   let cancelled = false;
@@ -138,10 +140,10 @@ useEffect(() => {
 
       setCatalog(data);
 
-      const selectableModels =
-        data.diffusionModels.filter(
-          (model) => model.selectableForGenerate
-        );
+      const selectableModels = getSelectableModels(
+        data.diffusionModels,
+        generationMode
+      );
 
       if (
         selectableModels.length > 0 &&
@@ -176,7 +178,7 @@ useEffect(() => {
   return () => {
     cancelled = true;
   };
-}, [modelId, setModelId]);
+}, [modelId, generationMode, setModelId]);
 
   const selectedModel = useMemo(
     () =>
@@ -193,10 +195,11 @@ useEffect(() => {
   
   const generateModels = useMemo(
       () =>
-        catalog.diffusionModels.filter(
-          (model) => model.selectableForGenerate
+        getSelectableModels(
+          catalog.diffusionModels,
+          generationMode
         ),
-      [catalog.diffusionModels]
+      [catalog.diffusionModels, generationMode]
   );
 
   const compatibleLoras = useMemo(
@@ -310,6 +313,10 @@ useEffect(() => {
               value={model.filename}
             >
               {model.name} · {familyName(model.family)}
+              {generationMode === "inpaint" &&
+              isRecommendedInpaintModel(model)
+                ? " · Recommended"
+                : ""}
             </option>
           ))}
         </select>
@@ -435,20 +442,31 @@ useEffect(() => {
         Resolution
 
         <select
-          value={resolutionId}
+          value={
+            preservesInputResolution
+              ? "original"
+              : resolutionId
+          }
           onChange={(event) =>
             setResolutionId(event.target.value)
           }
+          disabled={preservesInputResolution}
           className={inputClassName}
         >
-          {resolutionPresets.map((resolution) => (
-            <option
-              key={resolution.id}
-              value={resolution.id}
-            >
-              {resolution.label}
+          {preservesInputResolution ? (
+            <option value="original">
+              Original image size
             </option>
-          ))}
+          ) : (
+            resolutionPresets.map((resolution) => (
+              <option
+                key={resolution.id}
+                value={resolution.id}
+              >
+                {resolution.label}
+              </option>
+            ))
+          )}
         </select>
       </label>
 
@@ -482,7 +500,7 @@ useEffect(() => {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <NumberField
           label="Steps"
           value={steps}
@@ -528,7 +546,7 @@ useEffect(() => {
               type="button"
               onClick={randomizeSeed}
               disabled={seedLocked}
-              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-zinc-400 transition hover:border-violet-500 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-400 transition hover:border-violet-500 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-40"
               title="Generate random seed"
             >
               <Dice5 className="h-4 w-4" />
@@ -539,7 +557,7 @@ useEffect(() => {
       onClick={() =>
         setSeedLocked(!seedLocked)
       }
-      className={`rounded-xl border px-3 transition ${
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition ${
         seedLocked
           ? "border-violet-500 bg-violet-500/10 text-violet-300"
           : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-violet-500 hover:text-violet-300"
@@ -596,7 +614,11 @@ useEffect(() => {
           <SummaryItem
             label="Resolution"
             value={
-              resolutionPresets.find((item) => item.id === resolutionId)?.label ?? resolutionId
+              preservesInputResolution
+                ? "Original image size"
+                : resolutionPresets.find(
+                    (item) => item.id === resolutionId
+                  )?.label ?? resolutionId
             }
           />
           <SummaryItem label="Seed" value={seed === "-1" ? "Random" : seed} />
@@ -665,6 +687,34 @@ function getCompatibleLoras(
     (lora) =>
       lora.family === model.family ||
       lora.family === "unknown"
+  );
+}
+
+function getSelectableModels(
+  models: ModelItem[],
+  generationMode: "text_to_image" | "image_to_image" | "inpaint"
+): ModelItem[] {
+  if (generationMode === "inpaint") {
+    return models
+      .filter((model) => model.family === "flux")
+      .sort(
+        (a, b) =>
+          Number(isRecommendedInpaintModel(b)) -
+          Number(isRecommendedInpaintModel(a))
+      );
+  }
+
+  return models.filter((model) => model.selectableForGenerate);
+}
+
+function isRecommendedInpaintModel(
+  model: ModelItem
+): boolean {
+  const filename = model.filename.toLowerCase();
+
+  return (
+    filename.includes("fill") ||
+    filename.includes("inpaint")
   );
 }
 

@@ -8,6 +8,8 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Copy,
   ExternalLink,
@@ -113,6 +115,26 @@ export function HistoryWorkspace() {
         item.loraId.toLowerCase().includes(value)
     );
   }, [items, search]);
+
+  const selectedItemIndex = selectedItem
+    ? filteredItems.findIndex(
+        (item) => item.id === selectedItem.id
+      )
+    : -1;
+
+  function showSelectedItem(offset: number) {
+    if (filteredItems.length === 0) {
+      return;
+    }
+
+    const activeIndex =
+      selectedItemIndex === -1 ? 0 : selectedItemIndex;
+    const nextIndex =
+      (activeIndex + offset + filteredItems.length) %
+      filteredItems.length;
+
+    setSelectedItem(filteredItems[nextIndex]);
+  }
 
   async function handleDelete(id: string) {
     try {
@@ -264,7 +286,11 @@ export function HistoryWorkspace() {
       {selectedItem && (
         <HistoryDetailModal
           item={selectedItem}
+          itemIndex={selectedItemIndex}
+          itemCount={filteredItems.length}
           onClose={() => setSelectedItem(null)}
+          onPrevious={() => showSelectedItem(-1)}
+          onNext={() => showSelectedItem(1)}
           onReuse={handleReuse}
         />
       )}
@@ -369,23 +395,57 @@ function HistoryCard({
 
 function HistoryDetailModal({
   item,
+  itemIndex,
+  itemCount,
   onClose,
+  onPrevious,
+  onNext,
   onReuse,
 }: {
   item: HistoryItem;
+  itemIndex: number;
+  itemCount: number;
   onClose: () => void;
+  onPrevious: () => void;
+  onNext: () => void;
   onReuse: (item: HistoryItem) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm">
       <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950">
         <div className="grid lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="flex min-h-[500px] items-center justify-center bg-black p-6">
+          <div className="relative flex min-h-[500px] items-center justify-center bg-black p-6">
             <img
               src={item.imageUrl}
               alt={item.prompt}
               className="max-h-[80vh] max-w-full object-contain"
             />
+
+            {itemCount > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={onPrevious}
+                  aria-label="Show previous history image"
+                  className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-white shadow-xl backdrop-blur transition hover:border-violet-500 hover:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                >
+                  <ChevronLeft className="h-7 w-7" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onNext}
+                  aria-label="Show next history image"
+                  className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-white shadow-xl backdrop-blur transition hover:border-violet-500 hover:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                >
+                  <ChevronRight className="h-7 w-7" />
+                </button>
+
+                <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-zinc-700 bg-zinc-950/80 px-3 py-1 text-xs text-zinc-300 shadow-lg backdrop-blur">
+                  {itemIndex + 1} / {itemCount}
+                </span>
+              </>
+            )}
           </div>
 
           <aside className="space-y-6 border-l border-zinc-800 p-6">

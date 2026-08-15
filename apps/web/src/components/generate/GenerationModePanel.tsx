@@ -17,7 +17,7 @@ export function GenerationModePanel() {
       <p className="mb-3 text-sm font-medium text-zinc-300">
         Generation mode
       </p>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {modes.map((mode) => {
           const Icon = mode.icon;
           const active = generationMode === mode.id;

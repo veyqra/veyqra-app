@@ -19,6 +19,10 @@ class PersistedGenerationJob(BaseModel):
 
     comfy_prompt_id: str | None = None
     actual_seed: int | None = None
+    output_width: int | None = None
+    output_height: int | None = None
     history_saved: bool = False
+    mask_prompt: str | None = None
+    mask_preview_url: str | None = None
     image: GeneratedImageResponse | None = None
     error: str | None = None

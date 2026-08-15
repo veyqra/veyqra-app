@@ -9,6 +9,10 @@ from typing import Any
 from dataclasses import dataclass
 
 from app.schemas.generation import GenerateRequest, GenerationMode
+from app.services.prompt_parser import (
+    extract_mask_prompt,
+    normalize_mask_prompt,
+)
 
 API_ROOT = Path(__file__).resolve().parents[2]
 
@@ -22,6 +26,12 @@ IMAGE_TO_IMAGE_WORKFLOW_PATH = (
     API_ROOT
     / "workflows"
     / "flux-image2image-api.json"
+)
+
+INPAINT_WORKFLOW_PATH = (
+    API_ROOT
+    / "workflows"
+    / "inpaint_flux.json"
 )
 
 RESOLUTION_BY_ID = {
@@ -60,10 +70,29 @@ def load_flux_image_to_image_workflow_template() -> dict[str, Any]:
     ) as file:
         return json.load(file)
 
+
+def load_flux_inpaint_workflow_template() -> dict[str, Any]:
+    if not INPAINT_WORKFLOW_PATH.exists():
+        raise FileNotFoundError(
+            f"Workflow template not found: "
+            f"{INPAINT_WORKFLOW_PATH}"
+        )
+
+    with INPAINT_WORKFLOW_PATH.open(
+        "r",
+        encoding="utf-8",
+    ) as file:
+        return json.load(file)
+
+
 @dataclass
 class BuiltWorkflow:
     workflow: dict[str, Any]
     seed: int
+    width: int
+    height: int
+    mask_prompt: str | None = None
+
 
 def build_flux_text_to_image_workflow(
     request: GenerateRequest,
@@ -182,26 +211,47 @@ def build_flux_text_to_image_workflow(
     return BuiltWorkflow(
         workflow=workflow,
         seed=seed,
-        )
+        width=width,
+        height=height,
+    )
 
 
 def build_flux_image_to_image_workflow(
     request: GenerateRequest,
     model_filename: str,
     input_image_filename: str | None = None,
+    input_image_size: tuple[int, int] | None = None,
 ) -> BuiltWorkflow:
     # Use a dedicated image->image workflow template
     validate_flux_text_to_image_model(model_filename)
 
     workflow = deepcopy(load_flux_image_to_image_workflow_template())
 
-    width, height = RESOLUTION_BY_ID.get(
-        request.resolution_id,
-        (1024, 1024),
-    )
+    if input_image_size is None:
+        raise ValueError(
+            "Original input image dimensions are required "
+            "for image-to-image generation."
+        )
+
+    width, height = input_image_size
 
     workflow["2"]["inputs"]["width"] = width
     workflow["2"]["inputs"]["height"] = height
+
+    workflow["24"] = {
+        "inputs": {
+            "image": ["21", 0],
+            "upscale_method": "lanczos",
+            "width": width,
+            "height": height,
+            "crop": "disabled",
+        },
+        "class_type": "ImageScale",
+        "_meta": {
+            "title": "Restore Original Image Size",
+        },
+    }
+    workflow["18"]["inputs"]["images"] = ["24", 0]
 
     # LoRA
     if request.lora_id == "none":
@@ -274,6 +324,8 @@ def build_flux_image_to_image_workflow(
     return BuiltWorkflow(
         workflow=workflow,
         seed=seed,
+        width=width,
+        height=height,
     )
 
 
@@ -281,23 +333,137 @@ def build_flux_workflow(
     request: GenerateRequest,
     model_filename: str,
     input_image_filename: str | None = None,
+    input_image_size: tuple[int, int] | None = None,
 ) -> BuiltWorkflow:
 
     if request.mode == GenerationMode.TEXT_TO_IMAGE:
         return build_flux_text_to_image_workflow(
-            request=request, model_filename=model_filename, input_image_filename=input_image_filename
+            request=request,
+            model_filename=model_filename,
+            input_image_filename=input_image_filename,
         )
 
     if request.mode == GenerationMode.IMAGE_TO_IMAGE:
         return build_flux_image_to_image_workflow(
-            request=request, model_filename=model_filename, input_image_filename=input_image_filename
+            request=request,
+            model_filename=model_filename,
+            input_image_filename=input_image_filename,
+            input_image_size=input_image_size,
         )
 
     if request.mode == GenerationMode.INPAINT:
-        raise ValueError("Inpainting is not implemented yet.")
+        return build_flux_inpaint_workflow(
+            request=request,
+            model_filename=model_filename,
+            input_image_filename=input_image_filename,
+            input_image_size=input_image_size,
+        )
 
     raise ValueError(f"Unsupported generation mode: {request.mode}")
-    
+
+
+def build_flux_inpaint_workflow(
+    request: GenerateRequest,
+    model_filename: str,
+    input_image_filename: str | None = None,
+    input_image_size: tuple[int, int] | None = None,
+) -> BuiltWorkflow:
+    validate_flux_inpaint_model(model_filename)
+
+    workflow = deepcopy(load_flux_inpaint_workflow_template())
+
+    if input_image_size is None:
+        raise ValueError(
+            "Original input image dimensions are required "
+            "for inpaint generation."
+        )
+
+    width, height = input_image_size
+
+    workflow["246"]["inputs"]["width"] = width
+    workflow["246"]["inputs"]["height"] = height
+
+    workflow["254"] = {
+        "inputs": {
+            "image": ["251", 0],
+            "upscale_method": "lanczos",
+            "width": width,
+            "height": height,
+            "crop": "disabled",
+        },
+        "class_type": "ImageScale",
+        "_meta": {
+            "title": "Restore Original Image Size",
+        },
+    }
+    workflow["13"]["inputs"]["images"] = ["254", 0]
+
+    workflow["245"]["inputs"]["unet_name"] = model_filename
+
+    if request.lora_id == "none":
+        workflow["247"]["inputs"]["model"] = ["246", 0]
+    else:
+        workflow["252"]["inputs"]["lora_name"] = request.lora_id
+        workflow["252"]["inputs"]["strength_model"] = request.lora_strength
+        workflow["247"]["inputs"]["model"] = ["252", 0]
+
+    workflow["248"]["inputs"]["clip_l"] = request.prompt
+    workflow["248"]["inputs"]["t5xxl"] = request.prompt
+    workflow["248"]["inputs"]["guidance"] = request.guidance
+    workflow["250"]["inputs"]["clip_l"] = request.negative_prompt
+    workflow["250"]["inputs"]["t5xxl"] = request.negative_prompt
+
+    workflow["247"]["inputs"]["steps"] = request.steps
+    workflow["247"]["inputs"]["denoise"] = request.denoise_strength
+
+    # Seed
+    if request.seed == -1:
+        seed = randrange(0, 2**63 - 1)
+    else:
+        seed = request.seed
+
+    workflow["247"]["inputs"]["seed"] = seed
+
+    # Input image (uploaded to ComfyUI)
+    workflow["16"]["inputs"]["image"] = input_image_filename
+
+    # Grounding mask detector: prefer explicit mask_prompt, otherwise
+    # attempt to extract a target from the main prompt.
+    explicit_mask_prompt = (
+        normalize_mask_prompt(request.mask_prompt)
+        if request.mask_prompt
+        else ""
+    )
+
+    mask_prompt = (
+        explicit_mask_prompt
+        or extract_mask_prompt(request.prompt)
+    )
+
+    if not mask_prompt:
+        raise ValueError(
+            "Unable to determine the inpaint area "
+            "from the prompt. Use a prompt such as "
+            "'replace the red shirt with a black jacket'."
+        )
+
+    workflow["23"]["inputs"]["prompt"] = mask_prompt
+    workflow["23"]["inputs"]["confidence_threshold"] = request.mask_confidence
+
+    # Mask expand node
+    workflow["234"]["inputs"]["expand"] = request.mask_expand
+
+    workflow["13"]["inputs"]["filename_prefix"] = "Veyqra"
+
+    return BuiltWorkflow(
+        workflow=workflow,
+        seed=seed,
+        width=width,
+        height=height,
+        mask_prompt=mask_prompt,
+    )
+
+
 def validate_flux_text_to_image_model(
     filename: str,
 ) -> None:
@@ -316,4 +482,24 @@ def validate_flux_text_to_image_model(
         raise ValueError(
             f"Model '{filename}' is not compatible "
             "with the FLUX text-to-image workflow."
+        )
+
+
+def validate_flux_inpaint_model(
+    filename: str,
+) -> None:
+    name = filename.lower()
+
+    unsupported_markers = (
+        "sdxl",
+        "sd15",
+    )
+
+    if any(
+        marker in name
+        for marker in unsupported_markers
+    ):
+        raise ValueError(
+            f"Model '{filename}' is not compatible "
+            "with the FLUX inpaint workflow."
         )

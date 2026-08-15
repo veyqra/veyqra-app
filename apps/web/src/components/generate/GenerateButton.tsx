@@ -32,9 +32,6 @@ export function GenerateButton() {
   const setUploadedInputFilename = useGenerateStore(
     (state) => state.setUploadedInputFilename
   );
-  const maskImageFile = useGenerateStore((state) => state.maskImageFile);
-  const uploadedMaskFilename = useGenerateStore((state) => state.uploadedMaskFilename);
-  const setUploadedMaskFilename = useGenerateStore((state) => state.setUploadedMaskFilename);
 
   const setIsGenerating = useGenerateStore(
     (state) => state.setIsGenerating
@@ -63,7 +60,7 @@ export function GenerateButton() {
   const inputImageRequired =
     generationMode !== "text_to_image";
   const inputImageMissing =
-    inputImageRequired && !inputImageFile;
+    inputImageRequired && !inputImageFile && !uploadedInputFilename;
 
   async function handleGenerate() {
     setGenerationError(null);
@@ -76,7 +73,8 @@ export function GenerateButton() {
     try {
       if (
         generationMode !== "text_to_image" &&
-        !inputImageFile
+        !inputImageFile &&
+        !uploadedInputFilename
       ) {
         throw new Error(
           "Select an input image before generating."
@@ -97,29 +95,7 @@ export function GenerateButton() {
         setUploadedInputFilename(uploaded.filename);
       }
 
-      let maskFilename = uploadedMaskFilename;
-
-      if (
-        generationMode === "inpaint" &&
-        !maskImageFile &&
-        !maskFilename
-      ) {
-        throw new Error(
-          "Select an inpaint mask before generating."
-        );
-      }
-
-      if (
-        generationMode === "inpaint" &&
-        maskImageFile &&
-        !maskFilename
-      ) {
-        const uploadedMask = await uploadGenerationImage(
-          maskImageFile
-        );
-        maskFilename = uploadedMask.filename;
-        setUploadedMaskFilename(uploadedMask.filename);
-      }
+      // Mask uploads removed — inpainting uses automatic mask generation from prompt
 
       const request = getRequest();
 
@@ -129,10 +105,6 @@ export function GenerateButton() {
           generationMode === "text_to_image"
             ? null
             : inputFilename,
-        maskImage:
-          generationMode === "inpaint"
-            ? maskFilename
-            : null,
       });
 
       addJob(createdJob);

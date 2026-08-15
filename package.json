@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "echo \"Run frontend or backend individually\"",
     "web": "npm run dev --workspace=web",
-    "api": "uvicorn app.main:app --reload",
+    "api": "cd apps/api && .venv/bin/uvicorn app.main:app --reload",
     "lint": "echo \"Coming soon\"",
     "build": "echo \"Coming soon\""
   },

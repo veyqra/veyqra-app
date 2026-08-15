@@ -41,6 +41,8 @@ export type GenerationJob = {
   progress: number;
   createdAt: string;
   error?: string | null;
+  maskPrompt: string | null;
+  maskPreviewUrl: string | null;
   image?: GeneratedImage | null;
 };
 
@@ -48,6 +50,7 @@ export type GeneratedImage = {
   id: string;
   prompt: string;
   imageUrl: string;
+  maskPreviewUrl: string | null;
   modelName: string;
   width: number;
   height: number;
@@ -73,5 +76,7 @@ export type GenerateRequest = {
   guidance: number;
   denoiseStrength: number;
   batchSize: number;
-  maskImage: string | null;
+  maskPrompt: string;
+  maskConfidence: number;
+  maskExpand: number;
 };

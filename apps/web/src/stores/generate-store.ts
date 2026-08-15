@@ -22,10 +22,10 @@ type GenerateStore = {
   batchSize: number;
   denoiseStrength: number;
   inputImageUrl: string | null;
-  maskImageFile: File | null;
-  maskImageUrl: string | null;
-  uploadedMaskFilename: string | null;
   generationMode: "text_to_image" | "image_to_image" | "inpaint";
+  maskPrompt: string;
+  maskConfidence: number;
+  maskExpand: number;
   inputImageFile: File | null;
   uploadedInputFilename: string | null;
   previewImageUrl: string | null;
@@ -50,9 +50,9 @@ type GenerateStore = {
   setInputImageUrl: (value: string | null) => void;
   setGenerationMode: (  value: "text_to_image" | "image_to_image" | "inpaint") => void;
   setInputImageFile: (value: File | null) => void;
-  setMaskImageFile: (value: File | null) => void;
-  setMaskImageUrl: (value: string | null) => void;
-  setUploadedMaskFilename: (value: string | null) => void;
+  setMaskPrompt: (value: string) => void;
+  setMaskConfidence: (value: number) => void;
+  setMaskExpand: (value: number) => void;
   setUploadedInputFilename: (  value: string | null) => void;
   setPreviewImageUrl: (value: string | null) => void;
   setGenerationError: (  value: string | null) => void;
@@ -96,9 +96,9 @@ const initialSettings = {
   inputImageUrl: null,
   generationMode: "text_to_image" as const,
   inputImageFile: null,
-  maskImageFile: null,
-  maskImageUrl: null,
-  uploadedMaskFilename: null,
+  maskPrompt: "",
+  maskConfidence: 0.3,
+  maskExpand: 40,
   uploadedInputFilename: null,
   previewImageUrl: null,
   generationError: null,
@@ -136,14 +136,14 @@ export const useGenerateStore = create<GenerateStore>()(
   setBatchSize: (batchSize) => set({ batchSize }),
   setDenoiseStrength: (denoiseStrength) =>  set({ denoiseStrength }),
   setInputImageUrl: (inputImageUrl) => set({ inputImageUrl }),
-  setMaskImageFile: (maskImageFile) =>  set({ maskImageFile }),
-  setMaskImageUrl: (maskImageUrl) =>  set({ maskImageUrl }),
+  setMaskPrompt: (maskPrompt) => set({ maskPrompt }),
+  setMaskConfidence: (maskConfidence) => set({ maskConfidence }),
+  setMaskExpand: (maskExpand) => set({ maskExpand }),
   setGenerationMode: (generationMode) =>  set({ generationMode }),
   setInputImageFile: (inputImageFile) =>  set({ inputImageFile }),
   setPreviewImageUrl: (previewImageUrl) =>
     set({ previewImageUrl }),
   setUploadedInputFilename: (uploadedInputFilename) =>  set({ uploadedInputFilename }),
-  setUploadedMaskFilename: (uploadedMaskFilename) =>  set({ uploadedMaskFilename }),
   setGenerationError: (generationError) =>  set({ generationError }),
   setIsGenerating: (isGenerating) => set({ isGenerating }),
 
@@ -197,16 +197,15 @@ export const useGenerateStore = create<GenerateStore>()(
 
         return {
           prompt: state.prompt.trim(),
-          negativePrompt: state.negativePrompt.trim(),
+          negativePrompt: "",
           mode: state.generationMode,
           inputImage:
             state.generationMode === "text_to_image"
               ? null
               : state.uploadedInputFilename,
-          maskImage:
-            state.generationMode === "inpaint"
-              ? state.uploadedMaskFilename
-              : null,
+          maskPrompt: state.maskPrompt.trim(),
+          maskConfidence: state.maskConfidence,
+          maskExpand: state.maskExpand,
           modelId: state.modelId,
           loraId: state.loraId,
           loraStrength: state.loraStrength,
@@ -236,7 +235,9 @@ export const useGenerateStore = create<GenerateStore>()(
         batchSize: state.batchSize,
         generationMode: state.generationMode,
         uploadedInputFilename: state.uploadedInputFilename,
-        uploadedMaskFilename: state.uploadedMaskFilename,
+        maskPrompt: state.maskPrompt,
+        maskConfidence: state.maskConfidence,
+        maskExpand: state.maskExpand,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) {
