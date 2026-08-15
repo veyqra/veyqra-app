@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 
 MASK_PROMPT_ALIASES = {
     # Common typo: "brasserie" is a restaurant, not the garment.
@@ -94,6 +96,41 @@ def normalize_mask_prompt(value: str) -> str:
         value.casefold(),
         value,
     )
+
+
+def remove_mask_prompt(prompt: str, mask_prompt: str) -> str:
+    """Remove a detector target from the positive generation prompt."""
+    target = mask_prompt.strip()
+    if not target:
+        return prompt.strip()
+
+    candidates = [target]
+    candidates.extend(
+        alias
+        for alias, normalized in MASK_PROMPT_ALIASES.items()
+        if normalized.casefold() == target.casefold()
+    )
+
+    result = prompt
+    for candidate in candidates:
+        pattern = re.compile(
+            rf"(?<!\w)(?:(?:the|a|an)\s+)?{re.escape(candidate)}(?!\w)",
+            re.IGNORECASE,
+        )
+        result = pattern.sub("", result)
+
+    # Once the mask target is gone, remove the remaining edit command so the
+    # image model receives the desired replacement as a clean description.
+    result = re.sub(
+        r"\breplace\s*(?:(?:with|by)\s+)?",
+        "",
+        result,
+        flags=re.IGNORECASE,
+    )
+
+    result = re.sub(r"[ \t]+", " ", result)
+    result = re.sub(r"\s+([,.;:!?])", r"\1", result)
+    return result.strip(" \t\r\n,.;:")
 
 
 def _find_sentence_end(value: str) -> int | None:

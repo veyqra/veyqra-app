@@ -65,7 +65,7 @@ export function InputImagePanel() {
   const previewUrl =
     inputImageUrl ??
     (uploadedInputFilename
-      ? `${process.env.NEXT_PUBLIC_VYRRA_API_URL ?? "http://localhost:8000/api/v1"}/uploads/image/${uploadedInputFilename}`
+      ? `${process.env.NEXT_PUBLIC_VEYQRA_API_URL ?? "http://localhost:8000/api/v1"}/uploads/image/${uploadedInputFilename}`
       : null);
 
   if (generationMode === "text_to_image") {

@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { resolutionPresets } from "@/lib/generation-presets";
+import { copyHistoryImageToInputs } from "@/services/uploads-api";
 
 import type {
   GeneratedImage,
+  GenerationMode,
   GenerationJob,
   GenerateRequest,
 } from "@/types/generate";
@@ -49,6 +51,11 @@ type GenerateStore = {
   setDenoiseStrength: (value: number) => void;
   setInputImageUrl: (value: string | null) => void;
   setGenerationMode: (  value: "text_to_image" | "image_to_image" | "inpaint") => void;
+  prepareHistoryImage: (
+    imageId: string,
+    imageUrl: string,
+    mode: Exclude<GenerationMode, "text_to_image">
+  ) => Promise<void>;
   setInputImageFile: (value: File | null) => void;
   setMaskPrompt: (value: string) => void;
   setMaskConfidence: (value: number) => void;
@@ -140,6 +147,26 @@ export const useGenerateStore = create<GenerateStore>()(
   setMaskConfidence: (maskConfidence) => set({ maskConfidence }),
   setMaskExpand: (maskExpand) => set({ maskExpand }),
   setGenerationMode: (generationMode) =>  set({ generationMode }),
+  prepareHistoryImage: async (imageId, imageUrl, generationMode) => {
+    const uploaded = await copyHistoryImageToInputs(imageId);
+    const previousUrl = get().inputImageUrl;
+
+    if (previousUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(previousUrl);
+    }
+
+    set({
+      generationMode,
+      inputImageFile: null,
+      inputImageUrl: imageUrl,
+      uploadedInputFilename: uploaded.filename,
+      maskPrompt:
+        generationMode === "inpaint"
+          ? ""
+          : get().maskPrompt,
+      generationError: null,
+    });
+  },
   setInputImageFile: (inputImageFile) =>  set({ inputImageFile }),
   setPreviewImageUrl: (previewImageUrl) =>
     set({ previewImageUrl }),

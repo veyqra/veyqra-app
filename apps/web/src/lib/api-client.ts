@@ -44,7 +44,9 @@ export async function apiRequest<T>(
 
     const detail =
       details && typeof details === "object" && "detail" in details
-        ? String((details as any).detail)
+        ? String(
+            (details as Record<string, unknown>).detail
+          )
         : null;
 
     throw new ApiError(

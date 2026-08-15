@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { useGenerateStore } from "@/stores/generate-store";
+import { ImageReuseActions } from "./ImageReuseActions";
 
 export function HistoryPanel() {
   const history = useGenerateStore((state) => state.history);
@@ -91,35 +92,45 @@ export function HistoryPanel() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {history.map((image) => (
-            <button
+            <article
               key={image.id}
-              type="button"
-              onClick={() => setPreviewImageUrl(image.imageUrl)}
-              aria-pressed={image.imageUrl === previewImageUrl}
-              className={`group overflow-hidden rounded-xl border bg-zinc-950 text-left transition hover:border-violet-500 ${
+              className={`overflow-hidden rounded-xl border bg-zinc-950 transition hover:border-violet-500 ${
                 image.imageUrl === previewImageUrl
                   ? "border-violet-500 ring-2 ring-violet-500/30"
                   : "border-zinc-800"
               }`}
             >
-              <div className="aspect-square overflow-hidden bg-zinc-900">
-                <img
-                  src={image.imageUrl}
-                  alt={image.prompt}
-                  className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewImageUrl(image.imageUrl)}
+                aria-pressed={image.imageUrl === previewImageUrl}
+                className="group block w-full text-left"
+              >
+                <div className="aspect-square overflow-hidden bg-zinc-900">
+                  <img
+                    src={image.imageUrl}
+                    alt={image.prompt}
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                  />
+                </div>
 
-              <div className="p-3">
-                <p className="truncate text-sm font-medium">
-                  {image.prompt}
-                </p>
+                <div className="p-3">
+                  <p className="truncate text-sm font-medium">
+                    {image.prompt}
+                  </p>
 
-                <p className="mt-1 text-xs text-zinc-600">
-                  {image.modelName}
-                </p>
-              </div>
-            </button>
+                  <p className="mt-1 text-xs text-zinc-600">
+                    {image.modelName}
+                  </p>
+                </div>
+              </button>
+
+              <ImageReuseActions
+                imageId={image.id}
+                imageUrl={image.imageUrl}
+                className="border-t border-zinc-800 p-2"
+              />
+            </article>
           ))}
         </div>
       )}

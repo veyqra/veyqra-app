@@ -12,6 +12,7 @@ from app.schemas.generation import GenerateRequest, GenerationMode
 from app.services.prompt_parser import (
     extract_mask_prompt,
     normalize_mask_prompt,
+    remove_mask_prompt,
 )
 from app.services.translation_service import translate_to_english
 
@@ -375,6 +376,39 @@ def build_flux_inpaint_workflow(
         source_language=prompt_translation.source_language,
     ).text
 
+    # Grounding mask detector: prefer an explicit mask prompt. Otherwise,
+    # extract the target from the already translated generation prompt.
+    explicit_mask_prompt = (
+        normalize_mask_prompt(request.mask_prompt)
+        if request.mask_prompt
+        else ""
+    )
+
+    if explicit_mask_prompt:
+        mask_source_language = (
+            prompt_translation.source_language
+            if prompt_translation.source_language != "en"
+            else None
+        )
+        mask_prompt = translate_to_english(
+            explicit_mask_prompt,
+            source_language=mask_source_language,
+        ).text
+    else:
+        mask_prompt = extract_mask_prompt(translated_prompt)
+
+    if not mask_prompt:
+        raise ValueError(
+            "Unable to determine the inpaint area "
+            "from the prompt. Use a prompt such as "
+            "'replace the red shirt with a black jacket'."
+        )
+
+    generation_prompt = remove_mask_prompt(
+        translated_prompt,
+        mask_prompt,
+    )
+
     if input_image_size is None:
         raise ValueError(
             "Original input image dimensions are required "
@@ -410,8 +444,8 @@ def build_flux_inpaint_workflow(
         workflow["252"]["inputs"]["strength_model"] = request.lora_strength
         workflow["247"]["inputs"]["model"] = ["252", 0]
 
-    workflow["248"]["inputs"]["clip_l"] = translated_prompt
-    workflow["248"]["inputs"]["t5xxl"] = translated_prompt
+    workflow["248"]["inputs"]["clip_l"] = generation_prompt
+    workflow["248"]["inputs"]["t5xxl"] = generation_prompt
     workflow["248"]["inputs"]["guidance"] = request.guidance
     workflow["250"]["inputs"]["clip_l"] = translated_negative_prompt
     workflow["250"]["inputs"]["t5xxl"] = translated_negative_prompt
@@ -432,34 +466,6 @@ def build_flux_inpaint_workflow(
 
     # Input image (uploaded to ComfyUI)
     workflow["16"]["inputs"]["image"] = input_image_filename
-
-    # Grounding mask detector: prefer explicit mask_prompt, otherwise
-    # attempt to extract a target from the main prompt.
-    explicit_mask_prompt = (
-        normalize_mask_prompt(request.mask_prompt)
-        if request.mask_prompt
-        else ""
-    )
-
-    if explicit_mask_prompt:
-        mask_source_language = (
-            prompt_translation.source_language
-            if prompt_translation.source_language != "en"
-            else None
-        )
-        mask_prompt = translate_to_english(
-            explicit_mask_prompt,
-            source_language=mask_source_language,
-        ).text
-    else:
-        mask_prompt = extract_mask_prompt(translated_prompt)
-
-    if not mask_prompt:
-        raise ValueError(
-            "Unable to determine the inpaint area "
-            "from the prompt. Use a prompt such as "
-            "'replace the red shirt with a black jacket'."
-        )
 
     workflow["23"]["inputs"]["prompt"] = mask_prompt
     workflow["23"]["inputs"]["confidence_threshold"] = request.mask_confidence

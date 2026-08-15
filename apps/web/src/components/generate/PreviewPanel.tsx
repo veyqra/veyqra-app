@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { useGenerateStore } from "@/stores/generate-store";
+import { ImageReuseActions } from "./ImageReuseActions";
 
 export function PreviewPanel() {
   const previewImageUrl = useGenerateStore(
@@ -101,6 +102,14 @@ export function PreviewPanel() {
           )}
         </div>
       </div>
+
+      {previewImageUrl && currentHistoryIndex !== -1 && (
+        <ImageReuseActions
+          imageId={history[currentHistoryIndex].id}
+          imageUrl={previewImageUrl}
+          className="mb-4 sm:ml-auto sm:max-w-md"
+        />
+      )}
 
       <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 sm:min-h-[420px] lg:min-h-[620px]">
         {previewImageUrl ? (

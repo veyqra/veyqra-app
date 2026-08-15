@@ -24,6 +24,7 @@ import {
   deleteHistoryItem,
   getHistory,
 } from "@/services/history-api";
+import { ImageReuseActions } from "@/components/generate/ImageReuseActions";
 import { useGenerateStore } from "@/stores/generate-store";
 import type { HistoryItem } from "@/types/history";
 
@@ -180,7 +181,7 @@ export function HistoryWorkspace() {
     }
   }
 
-  function handleReuse(item: HistoryItem) {
+  function applyItemSettings(item: HistoryItem) {
     applySettings({
       prompt: item.prompt,
       negativePrompt: item.negativePrompt,
@@ -195,7 +196,19 @@ export function HistoryWorkspace() {
         item.height
       ),
     });
+  }
 
+  function handleReuse(item: HistoryItem) {
+    applyItemSettings(item);
+
+    router.push("/generate");
+  }
+
+  function handleImagePrepared(
+    item: HistoryItem
+  ) {
+    applyItemSettings(item);
+    setSelectedItem(null);
     router.push("/generate");
   }
 
@@ -277,6 +290,8 @@ export function HistoryWorkspace() {
               item={item}
               onDelete={handleDelete}
               onReuse={handleReuse}
+              onImagePrepared={handleImagePrepared}
+              onError={setError}
               onOpen={setSelectedItem}
             />
           ))}
@@ -292,6 +307,8 @@ export function HistoryWorkspace() {
           onPrevious={() => showSelectedItem(-1)}
           onNext={() => showSelectedItem(1)}
           onReuse={handleReuse}
+          onImagePrepared={handleImagePrepared}
+          onError={setError}
         />
       )}
     </div>
@@ -302,6 +319,10 @@ type HistoryCardProps = {
   item: HistoryItem;
   onDelete: (id: string) => Promise<void>;
   onReuse: (item: HistoryItem) => void;
+  onImagePrepared: (
+    item: HistoryItem
+  ) => void;
+  onError: (message: string) => void;
   onOpen: (item: HistoryItem) => void;
 };
 
@@ -309,6 +330,8 @@ function HistoryCard({
   item,
   onDelete,
   onReuse,
+  onImagePrepared,
+  onError,
   onOpen,
 }: HistoryCardProps) {
   return (
@@ -361,6 +384,13 @@ function HistoryCard({
           />
         </div>
 
+        <ImageReuseActions
+          imageId={item.id}
+          imageUrl={item.imageUrl}
+          onPrepared={() => onImagePrepared(item)}
+          onError={onError}
+        />
+
         <div className="flex items-center justify-between border-t border-zinc-800 pt-3">
           <span className="text-xs text-zinc-600">
             {formatDate(item.createdAt)}
@@ -401,6 +431,8 @@ function HistoryDetailModal({
   onPrevious,
   onNext,
   onReuse,
+  onImagePrepared,
+  onError,
 }: {
   item: HistoryItem;
   itemIndex: number;
@@ -409,6 +441,10 @@ function HistoryDetailModal({
   onPrevious: () => void;
   onNext: () => void;
   onReuse: (item: HistoryItem) => void;
+  onImagePrepared: (
+    item: HistoryItem
+  ) => void;
+  onError: (message: string) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm">
@@ -545,6 +581,13 @@ function HistoryDetailModal({
               <ExternalLink className="h-4 w-4" />
               Send to Generate
             </button>
+
+            <ImageReuseActions
+              imageId={item.id}
+              imageUrl={item.imageUrl}
+              onPrepared={() => onImagePrepared(item)}
+              onError={onError}
+            />
           </aside>
         </div>
       </div>

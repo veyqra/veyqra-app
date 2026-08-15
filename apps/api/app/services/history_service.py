@@ -72,6 +72,25 @@ class HistoryService:
 
         return item
 
+    def get_item(
+        self,
+        item_id: str,
+    ) -> HistoryItemResponse | None:
+        items = self._read_items()
+        target = next(
+            (
+                item
+                for item in items
+                if item.get("id") == item_id
+            ),
+            None,
+        )
+
+        if target is None:
+            return None
+
+        return HistoryItemResponse.model_validate(target)
+
     def delete_item(
         self,
         item_id: str,
