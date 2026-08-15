@@ -12,8 +12,6 @@ import {
   Cloud,
   Cpu,
   Menu,
-  Moon,
-  Search,
 } from "lucide-react";
 
 import { getDashboard } from "@/services/dashboard-api";
@@ -237,14 +235,6 @@ export function TopBar({
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3 lg:gap-4">
-        <button
-          type="button"
-          aria-label="Search"
-          className="hidden h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-violet-500 hover:bg-zinc-800 sm:flex"
-        >
-          <Search size={18} />
-        </button>
-
         <div className="relative">
           <button
             id="system-status-trigger"
@@ -376,27 +366,12 @@ export function TopBar({
 
         <button
           type="button"
-          aria-label="Toggle color theme"
-          className="hidden h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-violet-500 hover:bg-zinc-800 sm:flex"
+          aria-label="Open account menu"
+          title="Account"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-600/15 text-sm font-medium text-violet-300 transition hover:bg-violet-600/25 hover:text-violet-200"
         >
-          <Moon size={18} />
+          C
         </button>
-
-        <div className="hidden items-center gap-3 border-l border-zinc-800 pl-4 md:flex">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600/15 text-sm font-medium text-violet-300">
-            C
-          </div>
-
-          <div className="hidden xl:block">
-            <p className="text-sm font-medium text-zinc-200">
-              Chris
-            </p>
-
-            <p className="text-[11px] text-zinc-600">
-              Local account
-            </p>
-          </div>
-        </div>
       </div>
     </header>
   );

@@ -9,6 +9,7 @@ from app.services.prompt_parser import (
     normalize_mask_prompt,
     remove_mask_prompt,
 )
+from app.services.resolutions import resolve_resolution
 from app.services.translation_service import translate_to_english
 from app.services.workflow_loader import (
     load_flux_image_to_image_workflow,
@@ -16,24 +17,6 @@ from app.services.workflow_loader import (
     load_flux_text_to_image_workflow,
 )
 from app.services.workflow_types import BuiltWorkflow
-
-RESOLUTION_BY_ID = {
-    "portrait": (768, 1152),
-    "square": (1024, 1024),
-    "landscape": (1152, 768),
-    "1024x1024": (1024, 1024),
-    "832x1216": (832, 1216),
-    "1216x832": (1216, 832),
-    "896x1152": (896, 1152),
-    "1152x896": (1152, 896),
-}
-
-
-def resolve_resolution(resolution_id: str) -> tuple[int, int]:
-    return RESOLUTION_BY_ID.get(
-        resolution_id,
-        (1024, 1024),
-    )
 
 
 def build_flux_text_to_image_workflow(

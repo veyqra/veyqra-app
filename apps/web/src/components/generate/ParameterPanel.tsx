@@ -573,7 +573,9 @@ useEffect(() => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-zinc-300">Denoise strength</p>
-              <p className="mt-1 text-xs text-zinc-600">Lower values preserve more of the input image.</p>
+              <p className="mt-1 text-xs text-zinc-600">
+                Lower values preserve more of the input image.
+              </p>
             </div>
 
             <span className="rounded-lg bg-zinc-900 px-2.5 py-1 font-mono text-xs text-violet-300">
@@ -864,7 +866,11 @@ function getSelectableModels(
 ): ModelItem[] {
   if (generationMode === "inpaint") {
     return models
-      .filter((model) => model.family === "flux")
+      .filter(
+        (model) =>
+          model.family === "sdxl" ||
+          model.family === "flux"
+      )
       .sort(
         (a, b) =>
           Number(isRecommendedInpaintModel(b)) -
@@ -875,7 +881,7 @@ function getSelectableModels(
   if (generationMode === "image_to_image") {
     return models.filter(
       (model) =>
-        model.family === "flux" &&
+        (model.family === "flux" || model.family === "sdxl") &&
         model.selectableForGenerate
     );
   }

@@ -1,0 +1,193 @@
+{
+  "1": {
+    "inputs": {
+      "seed": 1103692487447268,
+      "steps": 30,
+      "cfg": 6,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1,
+      "model": [
+        "2",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "2": {
+    "inputs": {
+      "ckpt_name": "Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "4": {
+    "inputs": {
+      "text": "A neutral example prompt.",
+      "clip": [
+        "2",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": "A neutral example prompt.",
+      "clip": [
+        "2",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "6": {
+    "inputs": {
+      "samples": [
+        "1",
+        0
+      ],
+      "vae": [
+        "2",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "7": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "11": {
+    "inputs": {
+      "lora_name": "example-lora.safetensors",
+      "strength_model": 1,
+      "strength_clip": 1.15
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Load LoRA (Model and CLIP)"
+    }
+  },
+  "12": {
+    "inputs": {
+      "image": "input.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "18": {
+    "inputs": {
+      "grow_mask_by": 10,
+      "pixels": [
+        "23",
+        1
+      ],
+      "vae": [
+        "2",
+        2
+      ],
+      "mask": [
+        "23",
+        0
+      ]
+    },
+    "class_type": "VAEEncodeForInpaint",
+    "_meta": {
+      "title": "VAE Encode (for Inpainting)"
+    }
+  },
+  "22": {
+    "inputs": {
+      "model": "Florence-2: Base (Segmentation)",
+      "sa2va_dtype": "auto",
+      "keep_model_loaded": true
+    },
+    "class_type": "GroundingMaskModelLoader",
+    "_meta": {
+      "title": "Grounding Mask Model (down)Loader"
+    }
+  },
+  "23": {
+    "inputs": {
+      "prompt": "object",
+      "confidence_threshold": 0.3,
+      "florence2_max_tokens": 1024,
+      "florence2_num_beams": 3,
+      "seed": 42,
+      "model": [
+        "22",
+        0
+      ],
+      "image": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "GroundingMaskDetector",
+    "_meta": {
+      "title": "Grounding Mask Detector"
+    }
+  },
+  "25": {
+    "inputs": {
+      "mask": [
+        "23",
+        0
+      ]
+    },
+    "class_type": "MaskToImage",
+    "_meta": {
+      "title": "Convert Mask to Image"
+    }
+  },
+  "26": {
+    "inputs": {
+      "images": [
+        "25",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  }
+}

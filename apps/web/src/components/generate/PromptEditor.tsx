@@ -77,7 +77,7 @@ export function PromptEditor() {
         </span>
       </div>
 
-      {generationMode === "text_to_image" && modelFamily === "sdxl" && (
+      {modelFamily === "sdxl" && (
         <label className="block text-sm font-medium text-zinc-300">
           Negative prompt
           <span className="ml-2 text-xs font-normal text-zinc-600">

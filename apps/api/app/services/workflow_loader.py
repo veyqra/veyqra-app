@@ -16,6 +16,12 @@ FLUX_INPAINT_WORKFLOW_PATH = WORKFLOW_DIR / "inpaint_flux.json"
 SDXL_TEXT_TO_IMAGE_WORKFLOW_PATH = (
     WORKFLOW_DIR / "sdxl-text2image-api.json"
 )
+SDXL_IMAGE_TO_IMAGE_WORKFLOW_PATH = (
+    WORKFLOW_DIR / "sdxl-image2image-api.json"
+)
+SDXL_INPAINT_WORKFLOW_PATH = (
+    WORKFLOW_DIR / "sdxl-inpaint-api.json"
+)
 
 
 def load_workflow(path: Path) -> dict[str, Any]:
@@ -44,3 +50,13 @@ def load_flux_inpaint_workflow() -> dict[str, Any]:
 @lru_cache
 def load_sdxl_text_to_image_workflow() -> dict[str, Any]:
     return load_workflow(SDXL_TEXT_TO_IMAGE_WORKFLOW_PATH)
+
+
+@lru_cache
+def load_sdxl_image_to_image_workflow() -> dict[str, Any]:
+    return load_workflow(SDXL_IMAGE_TO_IMAGE_WORKFLOW_PATH)
+
+
+@lru_cache
+def load_sdxl_inpaint_workflow() -> dict[str, Any]:
+    return load_workflow(SDXL_INPAINT_WORKFLOW_PATH)

@@ -39,6 +39,7 @@ export const navigation = [
     title: "Cloud",
     href: "/cloud",
     icon: Cloud,
+    disabled: true,
   },
   {
     title: "Marketplace",
@@ -50,5 +51,6 @@ export const navigation = [
     title: "Settings",
     href: "/settings",
     icon: Settings,
+    disabled: true,
   },
 ];

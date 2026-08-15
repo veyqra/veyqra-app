@@ -160,6 +160,15 @@ class GenerationService:
         input_image_size: tuple[int, int] | None = None
 
         try:
+            selected_model, selected_lora = (
+                await model_service.get_selection(
+                    request.model_id,
+                    None
+                    if request.lora_id == "none"
+                    else request.lora_id,
+                )
+            )
+
             if request.mode in {
                 GenerationMode.IMAGE_TO_IMAGE,
                 GenerationMode.INPAINT,
@@ -185,13 +194,10 @@ class GenerationService:
                     )
                 )
 
-            selected_model = await model_service.get_model(
-                request.model_id
-            )
-
             built = build_generation_workflow(
                 request=request,
                 model=selected_model,
+                lora=selected_lora,
                 input_image_filename=comfy_filename,
                 input_image_size=input_image_size,
             )
@@ -457,6 +463,13 @@ class GenerationService:
                 )
                 default_mask_folder_type = "temp"
 
+            if mask_image_info is None:
+                mask_image_info = self._extract_node_image(
+                    history_entry,
+                    "26",
+                )
+                default_mask_folder_type = "temp"
+
             if mask_image_info is not None:
                 mask_filename = (
                     await storage_service.store_comfyui_image(
@@ -483,6 +496,11 @@ class GenerationService:
                 history_entry,
                 "13",
             )
+            if image_info is None:
+                image_info = self._extract_node_image(
+                    history_entry,
+                    "7",
+                )
         else:
             image_info = self._extract_first_image(
                 history_entry

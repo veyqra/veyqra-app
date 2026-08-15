@@ -176,7 +176,11 @@ export function GenerateButton() {
     <div className="space-y-2">
       <button
         type="button"
-        disabled={!prompt.trim() || isSubmitting || inputImageMissing}
+        disabled={
+          !prompt.trim() ||
+          isSubmitting ||
+          inputImageMissing
+        }
         onClick={handleGenerate}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-4 font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
       >

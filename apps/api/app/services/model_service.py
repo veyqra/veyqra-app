@@ -110,15 +110,49 @@ class ModelService:
         )
 
     async def get_model(self, filename: str) -> ModelItemResponse:
+        model, _ = await self.get_selection(filename)
+        return model
+
+    async def get_selection(
+        self,
+        model_filename: str,
+        lora_filename: str | None = None,
+    ) -> tuple[ModelItemResponse, ModelItemResponse | None]:
         catalog = await self.get_catalog()
-
-        for model in catalog.diffusion_models:
-            if model.filename == filename:
-                return model
-
-        raise ValueError(
-            f"Model '{filename}' was not found in the ComfyUI catalog."
+        selected_model = next(
+            (
+                model
+                for model in catalog.diffusion_models
+                if model.filename == model_filename
+            ),
+            None,
         )
+
+        if selected_model is None:
+            raise ValueError(
+                f"Model '{model_filename}' was not found "
+                "in the ComfyUI catalog."
+            )
+
+        if lora_filename is None:
+            return selected_model, None
+
+        selected_lora = next(
+            (
+                lora
+                for lora in catalog.loras
+                if lora.filename == lora_filename
+            ),
+            None,
+        )
+
+        if selected_lora is None:
+            raise ValueError(
+                f"LoRA '{lora_filename}' was not found "
+                "in the ComfyUI catalog."
+            )
+
+        return selected_model, selected_lora
 
     async def _get_combo_values(
         self,
@@ -163,7 +197,11 @@ class ModelService:
 
         if kind == ModelKind.DIFFUSION:
             capabilities = (
-                [ModelCapability.TEXT_TO_IMAGE]
+                [
+                    ModelCapability.TEXT_TO_IMAGE,
+                    ModelCapability.IMAGE_TO_IMAGE,
+                    ModelCapability.INPAINT,
+                ]
                 if family == ModelFamily.SDXL
                 else self._detect_model_capabilities(filename)
             )

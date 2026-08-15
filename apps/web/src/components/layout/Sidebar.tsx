@@ -49,8 +49,9 @@ const navigation = [
   },
   {
     title: "Cloud",
-    href: "/cloud",
+    href: "#",
     icon: Cloud,
+    disabled: true,
   },
   {
     title: "Marketplace",
@@ -60,8 +61,9 @@ const navigation = [
   },
   {
     title: "Settings",
-    href: "/settings",
+    href: "#",
     icon: Settings,
+    disabled: true,
   },
 ];
 

@@ -280,6 +280,7 @@ export const useGenerateStore = create<GenerateStore>()(
         sampler: state.sampler,
         scheduler: state.scheduler,
         batchSize: state.batchSize,
+        denoiseStrength: state.denoiseStrength,
         generationMode: state.generationMode,
         uploadedInputFilename: state.uploadedInputFilename,
         maskPrompt: state.maskPrompt,

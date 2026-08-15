@@ -10,12 +10,7 @@ The project is currently at **0.1.0 Alpha**. Local image generation is
 functional, while cloud integration, training, authentication, and the
 marketplace are still planned.
 
-<!-- SCREENSHOT: Desktop Generate workspace
-Suggested file: docs/screenshots/generate-desktop.webp
-Replace this marker with:
 ![Veyqra Generate workspace](docs/screenshots/generate-desktop.webp)
-Use a neutral generated image and include the settings, preview, and queue.
--->
 
 ## Current features
 
@@ -504,3 +499,11 @@ Please report security issues according to [SECURITY.md](SECURITY.md).
 
 Veyqra is licensed under the
 [GNU Affero General Public License v3.0](LICENSE).
+
+### Third-party components
+
+Veyqra does not distribute AI model weights. Models, LoRAs,
+ComfyUI custom nodes, and other third-party components remain subject
+to their respective licenses. Users are responsible for reviewing
+those licenses before use. Direct dependency license information is
+listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
