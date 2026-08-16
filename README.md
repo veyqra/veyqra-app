@@ -12,6 +12,16 @@ marketplace are still planned.
 
 ![Veyqra Generate workspace](docs/screenshots/generate-desktop.webp)
 
+## Motivation
+
+Veyqra started with a simple request: my girlfriend wanted to generate
+personalized images of herself. The available tools were powerful, but
+training a LoRA, configuring ComfyUI, and building the right workflows
+required too much specialist knowledge for an approachable creative process.
+
+The project aims to make those capabilities accessible through a focused
+interface without hiding the flexibility of the local AI tooling underneath.
+
 ## Current features
 
 - Dashboard with job, model, and runtime status
