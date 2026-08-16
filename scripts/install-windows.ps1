@@ -425,15 +425,19 @@ if ($Models.Count -gt 0) {
             Where-Object { $_ }
     )
     if ($normalizedModels -contains "all") {
-        $normalizedModels = @("flux-schnell", "flux-dev", "flux-fill")
+        $normalizedModels = @("flux-schnell", "flux-dev", "flux-fill", "sdxl-base")
     }
-    $allowedModels = @("flux-schnell", "flux-dev", "flux-fill")
+    $normalizedModels = @($normalizedModels | ForEach-Object {
+        if ($_ -eq "sdxl") { "sdxl-base" } else { $_ }
+    })
+    $allowedModels = @("flux-schnell", "flux-dev", "flux-fill", "sdxl-base")
     foreach ($model in $normalizedModels) {
         if ($allowedModels -notcontains $model) {
-            throw "Unknown model '$model'. Use flux-schnell, flux-dev, flux-fill, or all."
+            throw "Unknown model '$model'. Use flux-schnell, flux-dev, flux-fill, sdxl-base, all, or none."
         }
     }
-    if (-not $env:HF_TOKEN -and -not $env:HUGGING_FACE_HUB_TOKEN) {
+    $requiresToken = @($normalizedModels | Where-Object { $_ -like "flux-*" }).Count -gt 0
+    if ($requiresToken -and -not $env:HF_TOKEN -and -not $env:HUGGING_FACE_HUB_TOKEN) {
         throw "HF_TOKEN is required to download optional FLUX models. The token is not stored by Veyqra."
     }
     Invoke-SelectedPython -Arguments (@(

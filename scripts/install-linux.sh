@@ -33,7 +33,7 @@ Usage:
   scripts/install-linux.sh [options]
 
 Options:
-  --install-dir PATH       Install ComfyUI below PATH.
+  --install-dir PATH       Veyqra data/install directory.
                            Default: $XDG_DATA_HOME/veyqra or ~/.local/share/veyqra
   --comfyui-dir PATH       Use an existing ComfyUI directory or install there.
   --gpu BACKEND            auto, amd, nvidia, or cpu (default: auto).
@@ -44,8 +44,8 @@ Options:
   --port PORT              ComfyUI port (default: 8188).
   --with-manager           Also install the optional ComfyUI Manager.
   --with-translations      Download Veyqra's local prompt translation models.
-  --models LIST            Download comma-separated FLUX models: flux-schnell,
-                           flux-dev, flux-fill, all, or none (default: prompt).
+  --models LIST            Download models: flux-schnell, flux-dev, flux-fill,
+                           sdxl-base, all, or none (default: prompt).
   --update                 Fast-forward existing ComfyUI and custom-node repos.
   --no-start               Install and configure without starting ComfyUI.
   --yes                    Accept prompts. Does not download image models.
@@ -156,6 +156,24 @@ discover_comfyui_directories() {
   done
 }
 
+choose_install_root() {
+  local answer
+
+  if [[ "${INSTALL_ROOT_EXPLICIT}" == true ]]; then
+    INSTALL_ROOT="$(normalize_path "${INSTALL_ROOT%/}")"
+    return
+  fi
+
+  if [[ "${ASSUME_YES}" == true ]] || [[ ! -t 0 ]]; then
+    INSTALL_ROOT="$(normalize_path "${INSTALL_ROOT%/}")"
+    return
+  fi
+
+  printf '\n'
+  read -r -p "Veyqra data/install directory [${INSTALL_ROOT}]: " answer
+  INSTALL_ROOT="$(normalize_path "${answer:-${INSTALL_ROOT}}")"
+}
+
 choose_comfyui_directory() {
   local managed_directory
   local saved_directory
@@ -164,16 +182,14 @@ choose_comfyui_directory() {
   local index
   local -a detected=()
 
-  managed_directory="$(normalize_path "${DEFAULT_DATA_ROOT}/ComfyUI")"
+  managed_directory="$(normalize_path "${INSTALL_ROOT}/ComfyUI")"
 
   if [[ -n "${COMFYUI_DIR_OVERRIDE}" ]]; then
     COMFYUI_DIR="$(normalize_path "${COMFYUI_DIR_OVERRIDE%/}")"
-    INSTALL_ROOT="$(dirname -- "${COMFYUI_DIR}")"
     return
   fi
 
   if [[ "${INSTALL_ROOT_EXPLICIT}" == true ]]; then
-    INSTALL_ROOT="$(normalize_path "${INSTALL_ROOT%/}")"
     COMFYUI_DIR="${INSTALL_ROOT}/ComfyUI"
     return
   fi
@@ -189,13 +205,12 @@ choose_comfyui_directory() {
     else
       COMFYUI_DIR="${managed_directory}"
     fi
-    INSTALL_ROOT="$(dirname -- "${COMFYUI_DIR}")"
     return
   fi
 
   if (( ${#detected[@]} == 0 )); then
-    COMFYUI_DIR="${managed_directory}"
-    INSTALL_ROOT="$(dirname -- "${COMFYUI_DIR}")"
+    read -r -p "ComfyUI directory [${managed_directory}]: " custom_directory
+    COMFYUI_DIR="$(normalize_path "${custom_directory:-${managed_directory}}")"
     return
   fi
 
@@ -218,7 +233,8 @@ choose_comfyui_directory() {
     fi
 
     if [[ "${answer}" == "$(( ${#detected[@]} + 1 ))" ]]; then
-      COMFYUI_DIR="${managed_directory}"
+      read -r -p "ComfyUI directory [${managed_directory}]: " custom_directory
+      COMFYUI_DIR="$(normalize_path "${custom_directory:-${managed_directory}}")"
       break
     fi
 
@@ -239,7 +255,6 @@ choose_comfyui_directory() {
     fail "${COMFYUI_DIR} exists but is not a recognizable ComfyUI installation."
   fi
 
-  INSTALL_ROOT="$(dirname -- "${COMFYUI_DIR}")"
 }
 
 normalize_model_selection() {
@@ -250,7 +265,7 @@ normalize_model_selection() {
   local -A seen=()
 
   if [[ "${selection}" == "all" ]]; then
-    printf '%s\n' "flux-schnell,flux-dev,flux-fill"
+    printf '%s\n' "flux-schnell,flux-dev,flux-fill,sdxl-base"
     return
   fi
 
@@ -265,7 +280,8 @@ normalize_model_selection() {
       1|flux-schnell) item="flux-schnell" ;;
       2|flux-dev) item="flux-dev" ;;
       3|flux-fill) item="flux-fill" ;;
-      *) fail "Unknown model '${item}'. Use flux-schnell, flux-dev, flux-fill, all, or none." ;;
+      4|sdxl|sdxl-base) item="sdxl-base" ;;
+      *) fail "Unknown model '${item}'. Use flux-schnell, flux-dev, flux-fill, sdxl-base, all, or none." ;;
     esac
     if [[ -z "${seen[${item}]:-}" ]]; then
       normalized+=("${item}")
@@ -291,7 +307,7 @@ choose_models() {
     return
   fi
 
-  if ! confirm "Download optional official FLUX model weights?"; then
+  if ! confirm "Download optional official image model weights?"; then
     MODEL_SELECTION="none"
     return
   fi
@@ -303,9 +319,10 @@ Choose one or more models (comma-separated):
   [1] FLUX.1 Schnell   ~23.8 GB  Apache-2.0
   [2] FLUX.1 Dev       ~23.8 GB  FLUX dev non-commercial license
   [3] FLUX.1 Fill Dev  ~23.8 GB  FLUX dev non-commercial license
+  [4] SDXL Base 1.0     ~6.94 GB  CreativeML Open RAIL++-M
 
-Shared CLIP-L, T5XXL FP16 and VAE files add approximately 10.4 GB.
-All three choices require approximately 81.8 GB in total.
+FLUX selections also install shared CLIP-L, T5XXL FP16 and VAE files
+(approximately 10.4 GB). SDXL is a self-contained checkpoint.
 EOF
   read -r -p "Model selection [1]: " answer
   MODEL_SELECTION="$(normalize_model_selection "${answer:-1}")"
@@ -315,6 +332,11 @@ ensure_hugging_face_token() {
   local token
 
   [[ "${MODEL_SELECTION}" != "none" ]] || return
+  if [[ ",${MODEL_SELECTION}," != *",flux-schnell,"* ]] && \
+     [[ ",${MODEL_SELECTION}," != *",flux-dev,"* ]] && \
+     [[ ",${MODEL_SELECTION}," != *",flux-fill,"* ]]; then
+    return
+  fi
   [[ "${DRY_RUN}" == false ]] || {
     info "A Hugging Face token and accepted model agreements will be required."
     return
@@ -347,7 +369,7 @@ download_selected_models() {
 
   [[ "${MODEL_SELECTION}" != "none" ]] || return
   IFS=',' read -r -a selected <<<"${MODEL_SELECTION}"
-  log "Downloading optional FLUX models"
+  log "Downloading optional image models"
   run "${PYTHON_BIN}" "${SCRIPT_DIR}/download-comfyui-models.py" \
     --comfyui-dir "${COMFYUI_DIR}" \
     --manifest "${REPO_ROOT}/config/comfyui-models.json" \
@@ -601,6 +623,7 @@ Required by the current workflows:
   [ ] clip_l.safetensors
   [ ] t5xxl_fp16.safetensors
   [ ] ae.safetensors
+  [ ] An SDXL checkpoint such as sd_xl_base_1.0.safetensors
 EOF
 }
 
@@ -702,6 +725,7 @@ require_command npm "Install npm together with Node.js."
 select_python
 check_python_version
 check_node_version
+choose_install_root
 choose_comfyui_directory
 choose_models
 detect_gpu_backend

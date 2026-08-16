@@ -151,9 +151,9 @@ The workflow templates also expect these files by default:
 The selected diffusion model and optional LoRA are injected at runtime from
 the ComfyUI model catalog.
 
-The automated installer currently offers official FLUX model downloads. SDXL
-checkpoints and SDXL LoRAs must be installed in ComfyUI separately; Veyqra
-then discovers them through the model catalog.
+The automated installers offer official FLUX model bundles and the official
+SDXL Base 1.0 checkpoint. Other SDXL checkpoints and LoRAs can be installed in
+ComfyUI separately; Veyqra then discovers them through the model catalog.
 
 ## Quick start with Docker Compose
 
@@ -222,7 +222,8 @@ It performs the following steps:
 - Installs the required custom nodes from `config/comfyui-nodes.json`
 - Creates all model directories used by the Veyqra workflows
 - Optionally downloads selected official FLUX models plus their shared CLIP-L,
-  T5XXL, and VAE files directly into the correct ComfyUI directories
+  T5XXL and VAE files, or the official SDXL Base 1.0 checkpoint, directly into
+  the correct ComfyUI directories
 - Writes the local ComfyUI URL to `apps/api/.env`
 - Starts ComfyUI and verifies its system, queue, and required-node endpoints
 
@@ -231,6 +232,10 @@ Review the complete plan without changing the system:
 ```bash
 scripts/install-linux.sh --dry-run --yes
 ```
+
+Interactive runs ask separately for the Veyqra data/install directory and the
+ComfyUI directory. The Veyqra application repository itself remains at the
+location from which the installer is executed.
 
 Useful options:
 
@@ -242,7 +247,7 @@ Useful options:
 --hsa-override VERSION
 --with-manager
 --with-translations
---models flux-schnell,flux-dev,flux-fill|all|none
+--models flux-schnell,flux-dev,flux-fill,sdxl-base|all|none
 --no-start
 --update
 ```
@@ -257,12 +262,13 @@ HF_TOKEN=hf_your_token scripts/install-linux.sh \
   --models flux-dev,flux-fill
 ```
 
-The full shared FLUX assets require about 10.4 GB, and each full diffusion
-model adds about 23.8 GB. Downloads resume from `.part` files, check available
-disk space, and verify SHA-256 before replacing the destination file. FLUX.1
-Dev and Fill require accepting their Hugging Face agreements before running
-the installer. Tokens are read from `HF_TOKEN` or prompted without echo and
-are never written to Veyqra's configuration.
+The full shared FLUX assets require about 10.4 GB, and each full FLUX diffusion
+model adds about 23.8 GB. SDXL Base 1.0 requires about 6.94 GB and does not need
+the FLUX shared assets. Downloads resume from `.part` files, check available
+disk space, and verify SHA-256 before replacing the destination file. Gated
+FLUX files require accepted Hugging Face agreements. Tokens are read from
+`HF_TOKEN` or prompted without echo and are never written to Veyqra's
+configuration.
 
 Run `scripts/install-linux.sh --help` for all options.
 In non-interactive runs, a previously selected installation is reused; otherwise
@@ -297,7 +303,7 @@ Other options include `-InstallDir`, `-Python`, `-TorchIndexUrl`, `-Models`,
 
 ```powershell
 $env:HF_TOKEN = "hf_your_token"
-scripts\install-windows.ps1 -Models flux-schnell
+scripts\install-windows.ps1 -Models flux-schnell,sdxl-base
 ```
 
 NVIDIA and CPU PyTorch packages are selected automatically. Windows AMD builds

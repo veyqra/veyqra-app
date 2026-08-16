@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download explicitly selected FLUX assets into a ComfyUI model tree."""
+"""Download explicitly selected model assets into a ComfyUI model tree."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ CHUNK_SIZE = 8 * 1024 * 1024
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Download selected official FLUX models for Veyqra."
+        description="Download selected official image models for Veyqra."
     )
     parser.add_argument("--comfyui-dir", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, required=True)
@@ -47,9 +47,15 @@ def selected_assets(
     shared_assets: list[dict[str, Any]] = []
     for original in manifest.get("shared", []):
         asset = dict(original)
+        compatible_models = set(asset.pop("models", selected_ids))
+        compatible_selection = [
+            item for item in selected_ids if item in compatible_models
+        ]
+        if not compatible_selection:
+            continue
         urls_by_model = asset.pop("urls_by_model", None)
         if urls_by_model:
-            asset["url"] = urls_by_model[selected_ids[0]]
+            asset["url"] = urls_by_model[compatible_selection[0]]
         shared_assets.append(asset)
     return [*shared_assets, *(models[item] for item in selected_ids)]
 
@@ -162,7 +168,7 @@ def main() -> int:
         token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
         if any(asset.get("gated") for asset in assets) and not token:
             raise RuntimeError(
-                "HF_TOKEN is required for the selected gated FLUX files."
+                "HF_TOKEN is required for the selected gated model files."
             )
 
         required = required_bytes(assets, args.comfyui_dir)
