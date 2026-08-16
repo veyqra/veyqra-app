@@ -2,6 +2,7 @@
 
 import { Cpu, Server, X } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { useI18n } from "@/lib/i18n";
 
 type SystemStatusPopoverProps = {
   open: boolean;
@@ -26,6 +27,7 @@ export function SystemStatusPopover({
   queueRunning,
   queuePending,
 }: SystemStatusPopoverProps) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
   const usedVram = calculateUsed(vramTotal, vramFree);
   const vramPercent =
@@ -94,17 +96,17 @@ export function SystemStatusPopover({
       ref={ref}
       id="system-status-popover"
       role="dialog"
-      aria-label="Local system status"
-      className="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50"
+      aria-label={t("Show local system status")}
+      className="fixed left-4 right-4 top-[4.5rem] z-50 max-h-[calc(100dvh-5.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-none sm:w-[min(22rem,calc(100vw-2rem))] sm:overflow-hidden"
     >
       <div className="flex items-start justify-between border-b border-zinc-800 px-4 py-3">
         <div>
           <p className="text-sm font-semibold text-white">
-            System status
+            {t("System status")}
           </p>
 
           <p className="mt-0.5 text-xs text-zinc-500">
-            Veyqra local runtime
+            {t("Veyqra local runtime")}
           </p>
         </div>
 
@@ -112,7 +114,7 @@ export function SystemStatusPopover({
           type="button"
           onClick={onClose}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-900 hover:text-white"
-          aria-label="Close system status"
+          aria-label={t("Close system status")}
         >
           <X className="h-4 w-4" />
         </button>
@@ -143,7 +145,7 @@ export function SystemStatusPopover({
                 : "text-zinc-500"
             }`}
           >
-            {comfyOnline ? "Online" : "Offline"}
+            {comfyOnline ? t("Online") : t("Offline")}
           </span>
         </div>
 
@@ -161,11 +163,11 @@ export function SystemStatusPopover({
 
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-zinc-200">
-                {gpuName || "No GPU detected"}
+                {gpuName || t("No GPU detected")}
               </p>
 
               <p className="mt-0.5 text-xs text-zinc-500">
-                Local compute
+                {t("Local compute")}
               </p>
             </div>
           </div>
@@ -196,15 +198,15 @@ export function SystemStatusPopover({
               </div>
 
               <p className="mt-2 text-right text-[11px] text-zinc-600">
-                {vramPercent}% used
+                {vramPercent}% {t("used")}
               </p>
             </>
           )}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <QueueCard label="Running" value={queueRunning} />
-          <QueueCard label="Queued" value={queuePending} />
+          <QueueCard label={t("Running")} value={queueRunning} />
+          <QueueCard label={t("Queued")} value={queuePending} />
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import { useGenerateStore } from "@/stores/generate-store";
+import { useI18n } from "@/lib/i18n";
 
 const ACCEPTED_TYPES = [
   "image/png",
@@ -21,6 +22,7 @@ const ACCEPTED_TYPES = [
 ];
 
 export function InputImagePanel() {
+  const { t } = useI18n();
   const generationMode = useGenerateStore(
     (state) => state.generationMode
   );
@@ -135,7 +137,7 @@ export function InputImagePanel() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-zinc-300">
-            Input image
+            {t("Input image")}
           </p>
 
           <p className="mt-1 text-xs text-zinc-600">
@@ -150,7 +152,7 @@ export function InputImagePanel() {
             className="flex items-center gap-1.5 text-xs text-zinc-500 transition hover:text-red-300"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Remove
+            {t("Remove")}
           </button>
         )}
       </div>
@@ -168,7 +170,7 @@ export function InputImagePanel() {
           <div className="relative min-h-[220px] bg-black sm:aspect-video sm:min-h-0">
             <img
               src={previewUrl}
-              alt="Input preview"
+              alt={t("Input preview")}
               className="h-full w-full object-contain"
             />
           </div>
@@ -176,7 +178,7 @@ export function InputImagePanel() {
           <div className="flex items-center justify-between gap-3 border-t border-zinc-800 px-3 py-2">
             <div className="min-w-0">
               <p className="truncate text-xs text-zinc-400">
-                {inputImageFile?.name ?? uploadedInputFilename ?? "Input image"}
+                {inputImageFile?.name ?? uploadedInputFilename ?? t("Input image")}
               </p>
 
               {inputImageFile && (
@@ -195,7 +197,7 @@ export function InputImagePanel() {
               }
               className="shrink-0 text-xs font-medium text-violet-300 transition hover:text-violet-200"
             >
-              Replace
+              {t("Replace")}
             </button>
           </div>
         </div>
@@ -215,16 +217,16 @@ export function InputImagePanel() {
           </div>
 
           <p className="mt-3 text-sm font-medium text-zinc-300">
-            Drop an image here
+            {t("Drop an image here")}
           </p>
 
           <p className="mt-1 text-xs text-zinc-600">
-            or click to browse
+            {t("or click to browse")}
           </p>
 
           <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-violet-300">
             <Upload className="h-3.5 w-3.5" />
-            Select image
+            {t("Select image")}
           </div>
         </div>
       )}

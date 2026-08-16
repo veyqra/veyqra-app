@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { useGenerateStore } from "@/stores/generate-store";
 import type { GenerationMode } from "@/types/generate";
+import { useI18n } from "@/lib/i18n";
 
 type InputMode = Exclude<GenerationMode, "text_to_image">;
 
@@ -23,6 +24,7 @@ export function ImageReuseActions({
   onPrepared,
   onError,
 }: ImageReuseActionsProps) {
+  const { t } = useI18n();
   const [pendingMode, setPendingMode] =
     useState<InputMode | null>(null);
   const prepareHistoryImage = useGenerateStore(
@@ -47,7 +49,7 @@ export function ImageReuseActions({
       const message =
         error instanceof Error
           ? error.message
-          : "Unable to prepare the image.";
+          : t("Unable to prepare the image.");
 
       setGenerationError(message);
       onError?.(message);
@@ -69,7 +71,7 @@ export function ImageReuseActions({
         ) : (
           <ImageIcon className="h-4 w-4" />
         )}
-        Image to Image
+        {t("Image to Image")}
       </button>
 
       <button
@@ -83,7 +85,7 @@ export function ImageReuseActions({
         ) : (
           <Brush className="h-4 w-4" />
         )}
-        Inpaint
+        {t("Inpaint")}
       </button>
     </div>
   );

@@ -16,6 +16,7 @@ import type {
   ModelFamily,
   ModelItem,
 } from "@/types/models";
+import { useI18n } from "@/lib/i18n";
 
 const emptyCatalog: ModelCatalog = {
   diffusionModels: [],
@@ -23,6 +24,7 @@ const emptyCatalog: ModelCatalog = {
 };
 
 export function ModelsWorkspace() {
+  const { t } = useI18n();
   const [catalog, setCatalog] =
     useState<ModelCatalog>(emptyCatalog);
 
@@ -117,19 +119,19 @@ export function ModelsWorkspace() {
     <div className="space-y-8">
       <section className="grid gap-4 md:grid-cols-3">
         <Stat
-          label="Diffusion models"
+          label={t("Diffusion models")}
           value={catalog.diffusionModels.length}
           icon={BrainCircuit}
         />
 
         <Stat
-          label="LoRAs"
+          label={t("LoRAs")}
           value={catalog.loras.length}
           icon={Sparkles}
         />
 
         <Stat
-          label="Total"
+          label={t("Total")}
           value={
             catalog.diffusionModels.length +
             catalog.loras.length
@@ -148,7 +150,7 @@ export function ModelsWorkspace() {
               onChange={(event) =>
                 setSearch(event.target.value)
               }
-              placeholder="Search models and LoRAs..."
+              placeholder={t("Search models and LoRAs...")}
               className="w-full rounded-xl border border-zinc-800 bg-zinc-950 py-3 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-violet-500"
             />
           </div>
@@ -162,11 +164,11 @@ export function ModelsWorkspace() {
             }
             className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm outline-none transition focus:border-violet-500"
           >
-            <option value="all">All families</option>
+            <option value="all">{t("All families")}</option>
             <option value="flux">FLUX</option>
             <option value="sdxl">SDXL</option>
             <option value="sd15">SD 1.5</option>
-            <option value="unknown">Unknown</option>
+            <option value="unknown">{t("Unknown")}</option>
           </select>
 
           <button
@@ -181,7 +183,7 @@ export function ModelsWorkspace() {
               }`}
             />
 
-            Refresh
+            {t("Refresh")}
           </button>
         </div>
       </section>
@@ -197,21 +199,21 @@ export function ModelsWorkspace() {
           <div className="text-center text-zinc-500">
             <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-violet-400" />
             <p className="mt-4">
-              Loading ComfyUI models...
+              {t("Loading ComfyUI models...")}
             </p>
           </div>
         </div>
       ) : (
         <>
           <ModelSection
-            title="Diffusion Models"
-            description="Base diffusion models available to ComfyUI."
+            title={t("Diffusion Models")}
+            description={t("Base diffusion models available to ComfyUI.")}
             items={filteredModels}
           />
 
           <ModelSection
-            title="LoRAs"
-            description="LoRA adapters available to ComfyUI."
+            title={t("LoRAs")}
+            description={t("LoRA adapters available to ComfyUI.")}
             items={filteredLoras}
           />
         </>
@@ -231,6 +233,8 @@ function ModelSection({
   description,
   items,
 }: ModelSectionProps) {
+  const { t } = useI18n();
+
   return (
     <section className="space-y-5">
       <div>
@@ -252,7 +256,7 @@ function ModelSection({
       {items.length === 0 ? (
         <div className="flex min-h-40 items-center justify-center rounded-2xl border border-dashed border-zinc-800 bg-zinc-900">
           <p className="text-sm text-zinc-600">
-            No matching models found.
+            {t("No matching models found.")}
           </p>
         </div>
       ) : (
@@ -274,6 +278,7 @@ function ModelCard({
 }: {
   item: ModelItem;
 }) {
+  const { t } = useI18n();
   const Icon =
     item.kind === "lora"
       ? Sparkles
@@ -312,20 +317,20 @@ function ModelCard({
                 key={capability}
                 className="rounded-lg border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-xs text-zinc-400"
               >
-                {capabilityName(capability)}
+                {t(capabilityName(capability))}
               </span>
             ))}
 
             {item.kind === "diffusion" &&
               !item.selectableForGenerate && (
                 <span className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs text-amber-300">
-                  Specialized
+                  {t("Specialized")}
                 </span>
               )}
 
             <span className="flex items-center gap-1.5 text-xs text-emerald-400">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              Available
+              {t("Available")}
             </span>
           </div>
         </div>
@@ -339,6 +344,7 @@ function FamilyBadge({
 }: {
   family: ModelFamily;
 }) {
+  const { t } = useI18n();
   const names: Record<ModelFamily, string> = {
     flux: "FLUX",
     sdxl: "SDXL",
@@ -348,7 +354,7 @@ function FamilyBadge({
 
   return (
     <span className="whitespace-nowrap rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-300">
-      {names[family]}
+      {t(names[family])}
     </span>
   );
 }

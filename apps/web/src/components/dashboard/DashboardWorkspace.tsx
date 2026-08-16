@@ -23,8 +23,10 @@ import Link from "next/link";
 
 import type { LucideIcon } from "lucide-react";
 import type { GenerationJob } from "@/types/generate";
+import { useI18n } from "@/lib/i18n";
 
 export function DashboardWorkspace() {
+  const { t } = useI18n();
   const [data, setData] =
     useState<DashboardData | null>(null);
 
@@ -127,11 +129,11 @@ export function DashboardWorkspace() {
       <section className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-white">
-            Dashboard
+            {t("Dashboard")}
           </h1>
 
           <p className="mt-2 text-sm text-zinc-500">
-            Veyqra workstation overview.
+            {t("Veyqra workstation overview.")}
           </p>
         </div>
 
@@ -151,7 +153,7 @@ export function DashboardWorkspace() {
             }`}
           />
 
-          Refresh
+          {t("Refresh")}
         </button>
       </section>
 
@@ -165,16 +167,16 @@ export function DashboardWorkspace() {
         <>
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
-              label="Models"
+              label={t("Models")}
               value={data.stats.totalModels}
-              detail={`${data.stats.diffusionModels} base · ${data.stats.loras} LoRA`}
+              detail={`${data.stats.diffusionModels} ${t("base")} · ${data.stats.loras} LoRA`}
               icon={Boxes}
             />
 
             <StatCard
-              label="Active Jobs"
+              label={t("Active Jobs")}
               value={data.stats.activeJobs}
-              detail={`${data.stats.completedJobs} completed`}
+              detail={`${data.stats.completedJobs} ${t("completed")}`}
               icon={Workflow}
             />
 
@@ -182,10 +184,10 @@ export function DashboardWorkspace() {
               label="ComfyUI"
               value={
                 data.system.comfyuiOnline
-                  ? "Online"
-                  : "Offline"
+                  ? t("Online")
+                  : t("Offline")
               }
-              detail="Local backend"
+              detail={t("Local backend")}
               icon={
                 data.system.comfyuiOnline
                   ? CheckCircle2
@@ -197,10 +199,10 @@ export function DashboardWorkspace() {
               label="GPU"
               value={
                 data.system.gpuOnline
-                  ? "Online"
-                  : "Offline"
+                  ? t("Online")
+                  : t("Offline")
               }
-              detail="ComfyUI device"
+              detail={t("ComfyUI device")}
               icon={Cpu}
             />
           </section>
@@ -210,11 +212,11 @@ export function DashboardWorkspace() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-white">
-                    Recent jobs
+                    {t("Recent jobs")}
                   </h2>
 
                   <p className="mt-1 text-sm text-zinc-500">
-                    Latest generation activity.
+                    {t("Latest generation activity.")}
                   </p>
                 </div>
               </div>
@@ -222,7 +224,7 @@ export function DashboardWorkspace() {
               <div className="mt-6 space-y-3">
                 {data.recentJobs.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-600">
-                    No generation jobs yet.
+                    {t("No generation jobs yet.")}
                   </div>
                 ) : (
                   data.recentJobs.map(
@@ -239,32 +241,32 @@ export function DashboardWorkspace() {
 
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
               <h2 className="text-lg font-semibold text-white">
-                Quick actions
+                {t("Quick actions")}
               </h2>
 
               <p className="mt-1 text-sm text-zinc-500">
-                Common Veyqra workflows.
+                {t("Common Veyqra workflows.")}
               </p>
 
               <div className="mt-6 grid gap-3">
                 <QuickAction
                   href="/generate"
-                  title="Generate image"
-                  description="Start a new local generation."
+                  title={t("Generate image")}
+                  description={t("Start a new local generation.")}
                   icon={ImagePlus}
                 />
 
                 <QuickAction
                   href="/jobs"
-                  title="View jobs"
-                  description="Monitor generation jobs."
+                  title={t("View jobs")}
+                  description={t("Monitor generation jobs.")}
                   icon={Workflow}
                 />
 
                 <QuickAction
                   href="/models"
-                  title="Manage models"
-                  description="Browse available models and LoRAs."
+                  title={t("Manage models")}
+                  description={t("Browse available models and LoRAs.")}
                   icon={Boxes}
                 />
               </div>
@@ -317,6 +319,7 @@ function RecentJob({
 }: {
   job: GenerationJob;
 }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
       <div className="flex items-start justify-between gap-4">
@@ -331,7 +334,7 @@ function RecentJob({
         </div>
 
         <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs capitalize text-zinc-300">
-          {job.status}
+          {t(job.status.charAt(0).toUpperCase() + job.status.slice(1))}
         </span>
       </div>
 

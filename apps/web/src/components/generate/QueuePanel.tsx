@@ -3,8 +3,10 @@
 import { Clock3, Trash2, X } from "lucide-react";
 
 import { useGenerateStore } from "@/stores/generate-store";
+import { useI18n } from "@/lib/i18n";
 
 export function QueuePanel() {
+  const { t } = useI18n();
   const queue = useGenerateStore((state) => state.queue);
   const removeJob = useGenerateStore((state) => state.removeJob);
   const clearQueue = useGenerateStore((state) => state.clearQueue);
@@ -13,16 +15,16 @@ export function QueuePanel() {
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Queue</h2>
+          <h2 className="text-xl font-semibold">{t("Queue")}</h2>
 
           <p className="mt-1 text-sm text-zinc-500">
-            Generation jobs and their progress.
+            {t("Generation jobs and their progress.")}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <span className="rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-400">
-            {queue.length} jobs
+            {queue.length} {t("Jobs")}
           </span>
 
           {queue.length > 0 && (
@@ -30,7 +32,7 @@ export function QueuePanel() {
               type="button"
               onClick={clearQueue}
               className="text-zinc-500 transition hover:text-red-400"
-              aria-label="Clear queue"
+              aria-label={t("Clear queue")}
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -42,7 +44,7 @@ export function QueuePanel() {
         <div className="flex min-h-28 items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-950">
           <div className="flex items-center gap-2 text-sm text-zinc-600">
             <Clock3 className="h-4 w-4" />
-            No active jobs
+            {t("No active jobs")}
           </div>
         </div>
       ) : (
@@ -59,7 +61,7 @@ export function QueuePanel() {
                   </p>
 
                   <p className="mt-1 text-xs text-zinc-500">
-                    {job.modelName} · {job.status}
+                    {job.modelName} · {t(statusLabel(job.status))}
                   </p>
                 </div>
 
@@ -67,7 +69,7 @@ export function QueuePanel() {
                   type="button"
                   onClick={() => removeJob(job.id)}
                   className="text-zinc-600 transition hover:text-red-400"
-                  aria-label="Remove job"
+                  aria-label={t("Remove job")}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -81,7 +83,7 @@ export function QueuePanel() {
               </div>
 
               <div className="mt-2 flex justify-between text-xs text-zinc-600">
-                <span>{job.status}</span>
+                <span>{t(statusLabel(job.status))}</span>
                 <span>{job.progress}%</span>
               </div>
             </article>
@@ -90,4 +92,8 @@ export function QueuePanel() {
       )}
     </section>
   );
+}
+
+function statusLabel(status: string): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }

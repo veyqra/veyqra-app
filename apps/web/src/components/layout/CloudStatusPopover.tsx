@@ -10,6 +10,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { useI18n } from "@/lib/i18n";
 
 type CloudStatusPopoverProps = {
   open: boolean;
@@ -22,6 +23,7 @@ export function CloudStatusPopover({
   onClose,
   connected,
 }: CloudStatusPopoverProps) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,8 +75,8 @@ export function CloudStatusPopover({
       ref={ref}
       id="cloud-status-popover"
       role="dialog"
-      aria-label="AWS cloud status"
-      className="absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50"
+      aria-label={t("AWS cloud status")}
+      className="fixed left-4 right-4 top-[4.5rem] z-50 max-h-[calc(100dvh-5.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-none sm:w-[min(20rem,calc(100vw-2rem))] sm:overflow-hidden"
     >
       <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
         <div>
@@ -83,7 +85,7 @@ export function CloudStatusPopover({
           </p>
 
           <p className="mt-0.5 text-xs text-zinc-500">
-            Bring your own AWS account
+            {t("Bring your own AWS account")}
           </p>
         </div>
 
@@ -91,7 +93,7 @@ export function CloudStatusPopover({
           type="button"
           onClick={onClose}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-900 hover:text-white"
-          aria-label="Close cloud status"
+          aria-label={t("Close cloud status")}
         >
           <X className="h-4 w-4" />
         </button>
@@ -100,29 +102,28 @@ export function CloudStatusPopover({
       <div className="space-y-2 p-3">
         <CloudStatusRow
           icon={Cloud}
-          label="AWS account"
-          value={connected ? "Connected" : "Not connected"}
+          label={t("AWS account")}
+          value={connected ? t("Connected") : t("Not connected")}
           online={connected}
         />
 
         <CloudStatusRow
           icon={KeyRound}
-          label="Credentials"
-          value={connected ? "Available" : "Not configured"}
+          label={t("Credentials")}
+          value={connected ? t("Available") : t("Not configured")}
           online={connected}
         />
 
         <CloudStatusRow
           icon={Server}
-          label="EC2 instances"
-          value="Not available"
+          label={t("EC2 instances")}
+          value={t("Not available")}
           online={false}
         />
       </div>
 
       <p className="border-t border-zinc-800 px-4 py-3 text-xs leading-5 text-zinc-600">
-        AWS connection and instance management will be added with the
-        backend integration.
+        {t("AWS connection and instance management will be added with the backend integration.")}
       </p>
     </div>
   );

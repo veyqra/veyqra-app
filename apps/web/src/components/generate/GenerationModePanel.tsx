@@ -1,11 +1,13 @@
 "use client";
 import {  Brush,  ImageIcon,  Sparkles,} from "lucide-react";
 import { useGenerateStore } from "@/stores/generate-store";
+import { useI18n } from "@/lib/i18n";
 
 type GenerationMode =  | "text_to_image"  | "image_to_image"  | "inpaint";
 const modes: {  id: GenerationMode;  label: string;  description: string;  icon: typeof Sparkles;}[] = [  {    id: "text_to_image",    label: "Text to Image",    description: "Generate an image from a prompt.",    icon: Sparkles,  },  {    id: "image_to_image",    label: "Image to Image",    description: "Transform an existing image.",    icon: ImageIcon,  },  {    id: "inpaint",    label: "Inpaint",    description: "Replace selected areas of an image.",    icon: Brush,  },];
 
 export function GenerationModePanel() {
+  const { t } = useI18n();
   const generationMode = useGenerateStore(
     (state) => state.generationMode
   );
@@ -15,7 +17,7 @@ export function GenerationModePanel() {
   return (
     <div>
       <p className="mb-3 text-sm font-medium text-zinc-300">
-        Generation mode
+        {t("Generation mode")}
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {modes.map((mode) => {
@@ -42,7 +44,7 @@ export function GenerationModePanel() {
                 }`}
               />
               <p className="mt-2 text-xs font-medium">
-                {mode.label}
+                {t(mode.label)}
               </p>
             </button>
           );

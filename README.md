@@ -39,7 +39,7 @@ interface without hiding the flexibility of the local AI tooling underneath.
 ## Current features
 
 - Dashboard with job, model, and runtime status
-- FLUX Text to Image, Image to Image, and Inpaint modes
+- FLUX and SDXL Text to Image, Image to Image, and Inpaint modes
 - Model and LoRA catalog loaded directly from ComfyUI
 - Multiple generation jobs in the ComfyUI queue
 - Progress, status, error reporting, and persistent job metadata
@@ -132,7 +132,9 @@ veyqra/
 - A running ComfyUI instance, available by default at
   `http://127.0.0.1:8188`
 - A GPU configuration supported by ComfyUI
-- FLUX models and the CLIP/VAE files required by the workflows
+- FLUX models and the CLIP/VAE files required by the FLUX workflows
+- An SDXL checkpoint in ComfyUI's `models/checkpoints` directory for SDXL
+  generation
 
 Inpaint additionally requires the custom nodes referenced by
 `inpaint_flux.json`:
@@ -151,6 +153,10 @@ The workflow templates also expect these files by default:
 
 The selected diffusion model and optional LoRA are injected at runtime from
 the ComfyUI model catalog.
+
+The automated installer currently offers official FLUX model downloads. SDXL
+checkpoints and SDXL LoRAs must be installed in ComfyUI separately; Veyqra
+then discovers them through the model catalog.
 
 ## Installation
 
@@ -348,12 +354,50 @@ The following addresses will be available:
 
 The root page redirects to `/dashboard`.
 
+## Supported model families
+
+Veyqra currently supports FLUX and SDXL. The backend selects the correct
+ComfyUI workflow automatically from the generation mode and the selected
+model's detected family. The frontend does not infer the family with its own
+filename checks.
+
+### FLUX
+
+FLUX uses the existing guidance-based controls and dedicated workflow
+templates for Text to Image, Image to Image, and FLUX Fill inpainting. FLUX
+LoRAs are applied to the model path.
+
+### SDXL
+
+SDXL has dedicated workflow templates for Text to Image, Image to Image, and
+Inpaint. The UI exposes SDXL-specific defaults and controls:
+
+- 30 steps and CFG `6.0`
+- `dpmpp_2m` sampler with the `karras` scheduler
+- Positive and negative prompts
+- Seed, batch size, sampler, and scheduler
+- Optional SDXL LoRAs applied to both the model and CLIP paths
+
+For SDXL Text to Image, the available resolutions are:
+
+- `1024 × 1024`
+- `832 × 1216`
+- `1216 × 832`
+- `896 × 1152`
+- `1152 × 896`
+
+The model catalog recognizes common SDXL checkpoint names such as `sdxl`,
+`sd_xl`, Juggernaut XL, RealVis XL, and DreamShaper XL. Compatible FLUX and
+SDXL LoRAs are grouped by model family. LoRAs whose family cannot be detected
+remain available as unclassified adapters.
+
 ## Generation modes
 
 ### Text to Image
 
 Creates a new image from a prompt. It supports model and LoRA selection,
-resolution, seed, steps, guidance, and batch size.
+resolution, seed, steps, guidance or CFG, sampler, scheduler, and batch size.
+Text-to-image workflows always use full denoising (`1.0`).
 
 ### Image to Image
 
@@ -362,8 +406,8 @@ resolution is preserved, and denoise controls the transformation strength.
 
 ### Inpaint
 
-Also preserves the original input resolution. FLUX Fill always uses a denoise
-value of `1.0` for inpainting.
+Also preserves the original input resolution. FLUX Fill and SDXL always use a
+denoise value of `1.0` for inpainting.
 
 The mask area can be entered explicitly, for example:
 

@@ -17,6 +17,8 @@ import {
 import { getDashboard } from "@/services/dashboard-api";
 import { useNotificationStore } from "@/stores/notification-store";
 import type { DashboardData } from "@/types/dashboard";
+import { useI18n } from "@/lib/i18n";
+import { AccountMenu } from "./AccountMenu";
 import { CloudStatusPopover } from "./CloudStatusPopover";
 import { NotificationPopover } from "./NotificationPopover";
 import { SystemStatusPopover } from "./SystemStatusPopover";
@@ -63,6 +65,7 @@ type TopBarProps = {
 export function TopBar({
   onOpenMobileMenu,
 }: TopBarProps) {
+  const { t } = useI18n();
   const pathname = usePathname();
   const [dashboard, setDashboard] =
     useState<DashboardData | null>(null);
@@ -70,6 +73,7 @@ export function TopBar({
   const [cloudOpen, setCloudOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] =
     useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const addNotification = useNotificationStore(
     (state) => state.addNotification
   );
@@ -167,8 +171,8 @@ export function TopBar({
       if (job.status === "completed") {
         addNotification({
           kind: "success",
-          title: "Generation completed",
-          message: job.prompt || "Your image is ready.",
+          title: t("Generation completed"),
+          message: job.prompt || t("Your image is ready."),
           jobId: job.id,
         });
       }
@@ -176,11 +180,11 @@ export function TopBar({
       if (job.status === "failed") {
         addNotification({
           kind: "error",
-          title: "Generation failed",
+          title: t("Generation failed"),
           message:
             job.error ||
             job.prompt ||
-            "The generation could not be completed.",
+            t("The generation could not be completed."),
           jobId: job.id,
         });
       }
@@ -188,17 +192,17 @@ export function TopBar({
       if (job.status === "cancelled") {
         addNotification({
           kind: "info",
-          title: "Generation cancelled",
+          title: t("Generation cancelled"),
           message:
             job.prompt ||
-            "The generation was cancelled.",
+            t("The generation was cancelled."),
           jobId: job.id,
         });
       }
     }
 
     previousJobStatusRef.current = currentStatuses;
-  }, [addNotification, dashboard]);
+  }, [addNotification, dashboard, t]);
 
   const currentRoute =
     Object.entries(routeInfo).find(
@@ -216,7 +220,7 @@ export function TopBar({
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          aria-label="Open navigation"
+          aria-label={t("Open navigation")}
           aria-controls="mobile-navigation"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-violet-500 hover:bg-zinc-800 lg:hidden"
         >
@@ -225,11 +229,11 @@ export function TopBar({
 
         <div className="min-w-0">
         <h2 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
-          {currentRoute.title}
+          {t(currentRoute.title)}
         </h2>
 
         <p className="mt-1 hidden truncate text-sm text-zinc-400 sm:block">
-          {currentRoute.subtitle}
+          {t(currentRoute.subtitle)}
         </p>
         </div>
       </div>
@@ -246,7 +250,7 @@ export function TopBar({
             }}
             aria-expanded={systemOpen}
             aria-controls="system-status-popover"
-            aria-label="Show local system status"
+            aria-label={t("Show local system status")}
             className="flex h-11 items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 transition hover:border-zinc-700 hover:bg-zinc-800"
           >
             <Cpu
@@ -263,7 +267,7 @@ export function TopBar({
               </p>
 
               <p className="text-xs font-medium text-zinc-200">
-                Local
+                {t("Local")}
               </p>
             </div>
           </button>
@@ -304,7 +308,7 @@ export function TopBar({
             }}
             aria-expanded={cloudOpen}
             aria-controls="cloud-status-popover"
-            aria-label="Show AWS cloud status"
+            aria-label={t("Show AWS cloud status")}
             className="flex h-11 items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 transition hover:border-zinc-700 hover:bg-zinc-800"
           >
             <Cloud className="h-4 w-4 text-sky-400" />
@@ -342,8 +346,8 @@ export function TopBar({
             aria-controls="notifications-popover"
             aria-label={
               unreadCount > 0
-                ? `Notifications, ${unreadCount} unread`
-                : "Notifications"
+                ? `${t("Notifications")}, ${unreadCount}`
+                : t("Notifications")
             }
             className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-violet-500 hover:bg-zinc-800"
           >
@@ -364,14 +368,29 @@ export function TopBar({
           />
         </div>
 
-        <button
-          type="button"
-          aria-label="Open account menu"
-          title="Account"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-600/15 text-sm font-medium text-violet-300 transition hover:bg-violet-600/25 hover:text-violet-200"
-        >
-          C
-        </button>
+        <div className="relative">
+          <button
+            id="account-menu-trigger"
+            type="button"
+            onClick={() => {
+              setSystemOpen(false);
+              setCloudOpen(false);
+              setNotificationsOpen(false);
+              setAccountOpen((value) => !value);
+            }}
+            aria-expanded={accountOpen}
+            aria-controls="account-menu"
+            aria-label={t("Open account menu")}
+            title={t("Account")}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-600/15 text-sm font-medium text-violet-300 transition hover:bg-violet-600/25 hover:text-violet-200"
+          >
+            C
+          </button>
+          <AccountMenu
+            open={accountOpen}
+            onClose={() => setAccountOpen(false)}
+          />
+        </div>
       </div>
     </header>
   );

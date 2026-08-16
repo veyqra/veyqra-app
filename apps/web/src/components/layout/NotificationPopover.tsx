@@ -18,6 +18,7 @@ import {
   type AppNotification,
   useNotificationStore,
 } from "@/stores/notification-store";
+import { useI18n } from "@/lib/i18n";
 
 type NotificationPopoverProps = {
   open: boolean;
@@ -28,6 +29,7 @@ export function NotificationPopover({
   open,
   onClose,
 }: NotificationPopoverProps) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
   const notifications = useNotificationStore(
     (state) => state.notifications
@@ -106,19 +108,19 @@ export function NotificationPopover({
       ref={ref}
       id="notifications-popover"
       role="dialog"
-      aria-label="Notifications"
-      className="absolute right-0 top-full z-50 mt-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50"
+      aria-label={t("Notifications")}
+      className="fixed left-4 right-4 top-[4.5rem] z-50 max-h-[calc(100dvh-5.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-none sm:w-[min(24rem,calc(100vw-2rem))] sm:overflow-hidden"
     >
       <div className="flex items-start justify-between border-b border-zinc-800 px-4 py-3">
         <div>
           <p className="text-sm font-semibold text-white">
-            Notifications
+            {t("Notifications")}
           </p>
 
           <p className="mt-0.5 text-xs text-zinc-500">
             {unreadCount > 0
-              ? `${unreadCount} unread`
-              : "You are all caught up"}
+              ? `${unreadCount} ${t("Notifications")}`
+              : t("You are all caught up")}
           </p>
         </div>
 
@@ -126,7 +128,7 @@ export function NotificationPopover({
           type="button"
           onClick={onClose}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-900 hover:text-white"
-          aria-label="Close notifications"
+          aria-label={t("Close notifications")}
         >
           <X className="h-4 w-4" />
         </button>
@@ -141,7 +143,7 @@ export function NotificationPopover({
               className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-zinc-400 transition hover:bg-zinc-900 hover:text-white"
             >
               <CheckCheck className="h-3.5 w-3.5" />
-              Mark all read
+              {t("Mark all read")}
             </button>
           )}
 
@@ -151,7 +153,7 @@ export function NotificationPopover({
             className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-zinc-500 transition hover:bg-zinc-900 hover:text-red-300"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Clear
+            {t("Clear")}
           </button>
         </div>
       )}
@@ -163,11 +165,11 @@ export function NotificationPopover({
           </div>
 
           <p className="mt-3 text-sm font-medium text-zinc-300">
-            No notifications
+            {t("No notifications")}
           </p>
 
           <p className="mt-1 text-xs leading-5 text-zinc-600">
-            Job updates will appear here.
+            {t("Job updates will appear here.")}
           </p>
         </div>
       ) : (
@@ -182,6 +184,7 @@ export function NotificationPopover({
               onRemove={() =>
                 removeNotification(notification.id)
               }
+              removeLabel={t("Remove notification")}
             />
           ))}
         </div>
@@ -194,12 +197,14 @@ type NotificationItemProps = {
   notification: AppNotification;
   onRead: () => void;
   onRemove: () => void;
+  removeLabel: string;
 };
 
 function NotificationItem({
   notification,
   onRead,
   onRemove,
+  removeLabel,
 }: NotificationItemProps) {
   const Icon =
     notification.kind === "success"
@@ -258,7 +263,7 @@ function NotificationItem({
         type="button"
         onClick={onRemove}
         className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-zinc-600 transition hover:text-red-300 sm:hidden sm:group-hover:flex"
-        aria-label="Remove notification"
+        aria-label={removeLabel}
       >
         <X className="h-3.5 w-3.5" />
       </button>

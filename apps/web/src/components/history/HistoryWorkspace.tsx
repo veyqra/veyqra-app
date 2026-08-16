@@ -27,8 +27,10 @@ import {
 import { ImageReuseActions } from "@/components/generate/ImageReuseActions";
 import { useGenerateStore } from "@/stores/generate-store";
 import type { HistoryItem } from "@/types/history";
+import { useI18n } from "@/lib/i18n";
 
 export function HistoryWorkspace() {
+  const { t } = useI18n();
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -162,7 +164,7 @@ export function HistoryWorkspace() {
     }
 
     const confirmed = window.confirm(
-      "Delete the complete generation history?"
+      t("Delete the complete generation history?")
     );
 
     if (!confirmed) {
@@ -221,7 +223,7 @@ export function HistoryWorkspace() {
               onChange={(event) =>
                 setSearch(event.target.value)
               }
-              placeholder="Search history..."
+              placeholder={t("Search history...")}
               className="w-full rounded-xl border border-zinc-800 bg-zinc-950 py-3 pl-11 pr-4 text-sm outline-none transition placeholder:text-zinc-600 focus:border-violet-500"
             />
           </div>
@@ -238,7 +240,7 @@ export function HistoryWorkspace() {
                   isLoading ? "animate-spin" : ""
                 }`}
               />
-              Refresh
+              {t("Refresh")}
             </button>
 
             <button
@@ -248,7 +250,7 @@ export function HistoryWorkspace() {
               className="flex items-center gap-2 rounded-xl border border-red-900/60 bg-red-950/20 px-4 py-3 text-sm text-red-300 transition hover:bg-red-950/40 disabled:opacity-40"
             >
               <Trash2 className="h-4 w-4" />
-              Clear
+              {t("Clear")}
             </button>
           </div>
         </div>
@@ -265,7 +267,7 @@ export function HistoryWorkspace() {
           <div className="text-center text-zinc-500">
             <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-violet-400" />
             <p className="mt-4">
-              Loading generation history...
+              {t("Loading generation history...")}
             </p>
           </div>
         </div>
@@ -275,7 +277,7 @@ export function HistoryWorkspace() {
             <Clock3 className="mx-auto h-8 w-8" />
 
             <p className="mt-3 text-sm">
-              No generation history found.
+              {t("No generation history found.")}
             </p>
           </div>
         </div>
@@ -329,6 +331,7 @@ function HistoryCard({
   onError,
   onOpen,
 }: HistoryCardProps) {
+  const { t } = useI18n();
   return (
     <article className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
       <button
@@ -359,22 +362,22 @@ function HistoryCard({
 
         <div className="grid grid-cols-2 gap-2 text-xs">
           <HistoryDetail
-            label="Resolution"
+            label={t("Resolution")}
             value={`${item.width} × ${item.height}`}
           />
 
           <HistoryDetail
-            label="Steps"
+            label={t("Steps")}
             value={String(item.steps)}
           />
 
           <HistoryDetail
-            label="Guidance"
+            label={t("Guidance")}
             value={String(item.guidance)}
           />
 
           <HistoryDetail
-            label="Seed"
+            label={t("Seed")}
             value={String(item.seed)}
           />
         </div>
@@ -398,7 +401,7 @@ function HistoryCard({
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-violet-300 transition hover:bg-violet-500/10"
             >
               <Copy className="h-4 w-4" />
-              Reuse
+              {t("Reuse")}
             </button>
 
             <button
@@ -407,7 +410,7 @@ function HistoryCard({
                 void onDelete(item.id)
               }
               className="rounded-lg p-2 text-zinc-500 transition hover:bg-red-950/30 hover:text-red-400"
-              aria-label="Delete history item"
+              aria-label={t("Delete history item")}
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -439,6 +442,7 @@ function HistoryDetailModal({
   onImagePrepared: () => void;
   onError: (message: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm">
       <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950">
@@ -455,7 +459,7 @@ function HistoryDetailModal({
                 <button
                   type="button"
                   onClick={onPrevious}
-                  aria-label="Show previous history image"
+                  aria-label={t("Show previous history image")}
                   className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-white shadow-xl backdrop-blur transition hover:border-violet-500 hover:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                 >
                   <ChevronLeft className="h-7 w-7" />
@@ -464,7 +468,7 @@ function HistoryDetailModal({
                 <button
                   type="button"
                   onClick={onNext}
-                  aria-label="Show next history image"
+                  aria-label={t("Show next history image")}
                   className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-white shadow-xl backdrop-blur transition hover:border-violet-500 hover:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                 >
                   <ChevronRight className="h-7 w-7" />
@@ -481,7 +485,7 @@ function HistoryDetailModal({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold">
-                  Generation details
+                  {t("Generation details")}
                 </h2>
 
                 <p className="mt-1 text-xs text-zinc-500">
@@ -494,13 +498,13 @@ function HistoryDetailModal({
                 onClick={onClose}
                 className="rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-400 hover:text-white"
               >
-                Close
+                {t("Close")}
               </button>
             </div>
 
             <div>
               <p className="text-xs uppercase tracking-wide text-zinc-600">
-                Prompt
+                {t("Prompt")}
               </p>
 
               <p className="mt-2 text-sm leading-6 text-zinc-300">
@@ -511,7 +515,7 @@ function HistoryDetailModal({
             {item.negativePrompt && (
               <div>
                 <p className="text-xs uppercase tracking-wide text-zinc-600">
-                  Negative prompt
+                  {t("Negative prompt")}
                 </p>
 
                 <p className="mt-2 text-sm leading-6 text-zinc-400">
@@ -522,7 +526,7 @@ function HistoryDetailModal({
 
             <div className="grid grid-cols-2 gap-3">
               <HistoryDetail
-                label="Model"
+                label={t("Model")}
                 value={item.modelName}
               />
 
@@ -530,35 +534,35 @@ function HistoryDetailModal({
                 label="LoRA"
                 value={
                   item.loraId === "none"
-                    ? "None"
+                    ? t("None")
                     : item.loraId
                 }
               />
 
               <HistoryDetail
-                label="Strength"
+                label={t("Strength")}
                 value={item.loraStrength.toFixed(2)}
               />
 
               <HistoryDetail
-                label="Resolution"
+                label={t("Resolution")}
                 value={`${item.width} × ${item.height}`}
               />
 
               <HistoryDetail
-                label="Steps"
+                label={t("Steps")}
                 value={String(item.steps)}
               />
 
               <HistoryDetail
-                label="Guidance"
+                label={t("Guidance")}
                 value={String(item.guidance)}
               />
             </div>
 
             <div>
               <p className="text-xs uppercase tracking-wide text-zinc-600">
-                Seed
+                {t("Seed")}
               </p>
 
               <p className="mt-2 break-all rounded-lg bg-zinc-900 p-3 font-mono text-xs text-zinc-300">
@@ -572,7 +576,7 @@ function HistoryDetailModal({
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500"
             >
               <ExternalLink className="h-4 w-4" />
-              Send to Generate
+              {t("Send to Generate")}
             </button>
 
             <ImageReuseActions

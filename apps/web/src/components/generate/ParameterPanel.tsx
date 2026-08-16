@@ -22,6 +22,7 @@ import {
 } from "@/lib/generation-presets";
 import { getModelCatalog } from "@/services/models-api";
 import { useGenerateStore } from "@/stores/generate-store";
+import { useI18n } from "@/lib/i18n";
 import type {
   SamplerName,
   SchedulerName,
@@ -40,6 +41,7 @@ const emptyCatalog: ModelCatalog = {
 };
 
 export function ParameterPanel() {
+  const { t } = useI18n();
   const modelId = useGenerateStore((state) => state.modelId);
   const loraId = useGenerateStore((state) => state.loraId);
   const loraStrength = useGenerateStore(
@@ -329,7 +331,7 @@ useEffect(() => {
           <SlidersHorizontal className="h-5 w-5 text-violet-400" />
 
           <h3 className="font-semibold">
-            Parameters
+            {t("Parameters")}
           </h3>
         </div>
 
@@ -339,7 +341,7 @@ useEffect(() => {
             onClick={() => void loadCatalog()}
             disabled={isLoading}
             className="text-zinc-500 transition hover:text-violet-400 disabled:opacity-50"
-            title="Refresh models"
+            title={t("Refresh models")}
           >
             <RefreshCw
               className={`h-4 w-4 ${
@@ -354,7 +356,7 @@ useEffect(() => {
             className="flex items-center gap-2 text-xs font-medium text-zinc-500 transition hover:text-white"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Reset
+            {t("Reset")}
           </button>
         </div>
       </div>
@@ -366,7 +368,7 @@ useEffect(() => {
       )}
 
       <label className="block text-sm font-medium text-zinc-300">
-        Model
+        {t("Model")}
 
         <select
           value={modelId}
@@ -394,14 +396,14 @@ useEffect(() => {
         >
           {isLoading && (
             <option value="">
-              Loading models...
+              {t("Loading models...")}
             </option>
           )}
 
           {!isLoading &&
             generateModels.length === 0 && (
               <option value="">
-                No models found
+                {t("No models found")}
               </option>
             )}
 
@@ -413,7 +415,7 @@ useEffect(() => {
               {model.name} · {familyName(model.family)}
               {generationMode === "inpaint" &&
               isRecommendedInpaintModel(model)
-                ? " · Recommended"
+                ? ` · ${t("Recommended")}`
                 : ""}
             </option>
           ))}
@@ -424,7 +426,7 @@ useEffect(() => {
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs text-zinc-500">Selected model</p>
+              <p className="text-xs text-zinc-500">{t("Selected model")}</p>
 
               <p
                 className="mt-1 truncate font-mono text-xs text-zinc-300"
@@ -445,7 +447,7 @@ useEffect(() => {
                 key={capability}
                 className="rounded-md bg-zinc-900 px-2 py-1 text-[11px] text-zinc-400"
               >
-                {capabilityName(capability)}
+                {t(capabilityName(capability))}
               </span>
             ))}
           </div>
@@ -464,7 +466,7 @@ useEffect(() => {
           className={inputClassName}
         >
           <option value="none">
-            No LoRA
+            {t("No LoRA")}
           </option>
 
           {compatibleLoras.map((lora) => (
@@ -474,7 +476,7 @@ useEffect(() => {
             >
               {lora.name}
               {lora.family === "unknown"
-                ? " · Unclassified"
+                ? ` · ${t("Unclassified")}`
                 : ""}
             </option>
           ))}
@@ -485,7 +487,7 @@ useEffect(() => {
         !isLoading &&
         compatibleLoras.length === 0 && (
           <p className="-mt-2 text-xs text-zinc-600">
-            No compatible LoRAs found for{" "}
+            {t("No compatible LoRAs found for")}{" "}
             {familyName(selectedModel.family)}.
           </p>
         )}
@@ -494,8 +496,8 @@ useEffect(() => {
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-zinc-300">LoRA strength</p>
-              <p className="mt-1 text-xs text-zinc-600">Controls how strongly the LoRA influences the model.</p>
+              <p className="text-sm font-medium text-zinc-300">{t("LoRA strength")}</p>
+              <p className="mt-1 text-xs text-zinc-600">{t("Controls how strongly the LoRA influences the model.")}</p>
             </div>
             <span className="rounded-lg bg-zinc-900 px-2.5 py-1 font-mono text-xs text-violet-300">
               {loraStrength.toFixed(2)}
@@ -524,7 +526,7 @@ useEffect(() => {
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 mt-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs text-zinc-500">Active LoRA</p>
+              <p className="text-xs text-zinc-500">{t("Active LoRA")}</p>
               <p className="mt-1 truncate font-mono text-xs text-zinc-300" title={selectedLora.filename}>
                 {selectedLora.filename}
               </p>
@@ -537,7 +539,7 @@ useEffect(() => {
       )}
 
       <label className="block text-sm font-medium text-zinc-300">
-        Resolution
+        {t("Resolution")}
 
         <select
           value={
@@ -553,7 +555,7 @@ useEffect(() => {
         >
           {preservesInputResolution ? (
             <option value="original">
-              Original image size
+              {t("Original image size")}
             </option>
           ) : (
             availableResolutionPresets.map((resolution) => (
@@ -572,9 +574,9 @@ useEffect(() => {
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-zinc-300">Denoise strength</p>
+              <p className="text-sm font-medium text-zinc-300">{t("Denoise strength")}</p>
               <p className="mt-1 text-xs text-zinc-600">
-                Lower values preserve more of the input image.
+                {t("Lower values preserve more of the input image.")}
               </p>
             </div>
 
@@ -594,8 +596,8 @@ useEffect(() => {
           />
 
           <div className="mt-1 flex justify-between text-[10px] text-zinc-700">
-            <span>Preserve</span>
-            <span>Transform</span>
+            <span>{t("Preserve")}</span>
+            <span>{t("Transform")}</span>
           </div>
         </div>
       )}
@@ -604,9 +606,9 @@ useEffect(() => {
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-zinc-300">Grow mask</p>
+              <p className="text-sm font-medium text-zinc-300">{t("Grow mask")}</p>
               <p className="mt-1 text-xs text-zinc-600">
-                Expands the detected mask to blend the edited edges.
+                {t("Expands the detected mask to blend the edited edges.")}
               </p>
             </div>
 
@@ -635,7 +637,7 @@ useEffect(() => {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <NumberField
-          label="Steps"
+          label={t("Steps")}
           value={steps}
           min={1}
           max={100}
@@ -643,7 +645,7 @@ useEffect(() => {
         />
 
         <NumberField
-          label={isSdxl ? "CFG" : "Guidance"}
+          label={isSdxl ? "CFG" : t("Guidance")}
           value={guidance}
           min={1}
           max={isSdxl ? 12 : 10}
@@ -654,7 +656,7 @@ useEffect(() => {
         {isSdxl && (
           <>
             <label className="block text-sm font-medium text-zinc-300">
-              Sampler
+              {t("Sampler")}
 
               <select
                 value={sampler}
@@ -671,7 +673,7 @@ useEffect(() => {
             </label>
 
             <label className="block text-sm font-medium text-zinc-300">
-              Scheduler
+              {t("Scheduler")}
 
               <select
                 value={scheduler}
@@ -690,14 +692,14 @@ useEffect(() => {
 
         <div className="block text-sm font-medium text-zinc-300">
           <div className="flex items-center justify-between">
-            <span>Seed</span>
+            <span>{t("Seed")}</span>
 
              <span className="text-xs font-normal text-zinc-500">
               {seed === "-1"
-               ? "Random"
+               ? t("Random")
                : seedLocked
-               ? "Locked"
-               : "Fixed"}
+               ? t("Locked")
+               : t("Fixed")}
              </span>
           </div>
 
@@ -717,7 +719,7 @@ useEffect(() => {
               onClick={randomizeSeed}
               disabled={seedLocked}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-400 transition hover:border-violet-500 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-40"
-              title="Generate random seed"
+              title={t("Generate random seed")}
             >
               <Dice5 className="h-4 w-4" />
             </button>
@@ -734,8 +736,8 @@ useEffect(() => {
       }`}
       title={
         seedLocked
-          ? "Unlock seed"
-          : "Lock seed"
+          ? t("Unlock seed")
+          : t("Lock seed")
       }
     >
       {seedLocked ? (
@@ -753,7 +755,7 @@ useEffect(() => {
       disabled={seedLocked}
       className="transition hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-40"
     >
-      Use random seed
+      {t("Use random seed")}
     </button>
 
     {seed !== "-1" && (
@@ -768,7 +770,7 @@ useEffect(() => {
 </div> 
 
         <NumberField
-          label="Batch size"
+          label={t("Batch size")}
           value={batchSize}
           min={1}
           max={8}
@@ -777,28 +779,28 @@ useEffect(() => {
       </div>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
-        <p className="text-xs uppercase tracking-wide text-zinc-600">Generation summary</p>
+        <p className="text-xs uppercase tracking-wide text-zinc-600">{t("Generation summary")}</p>
         <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-          <SummaryItem label="Model" value={selectedModel?.name ?? "None"} />
-          <SummaryItem label="LoRA" value={selectedLora?.name ?? "None"} />
+          <SummaryItem label={t("Model")} value={selectedModel?.name ?? t("None")} />
+          <SummaryItem label="LoRA" value={selectedLora?.name ?? t("None")} />
           <SummaryItem
-            label="Resolution"
+            label={t("Resolution")}
             value={
               preservesInputResolution
-                ? "Original image size"
+                ? t("Original image size")
                 : availableResolutionPresets.find(
                     (item) => item.id === resolutionId
                   )?.label ?? resolutionId
             }
           />
-          <SummaryItem label="Seed" value={seed === "-1" ? "Random" : seed} />
+          <SummaryItem label={t("Seed")} value={seed === "-1" ? t("Random") : seed} />
         </div>
       </div>
 
       {isLoading && (
         <div className="flex items-center gap-2 text-xs text-zinc-500">
           <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-          Reading model catalog from ComfyUI...
+          {t("Reading model catalog from ComfyUI...")}
         </div>
       )}
     </section>

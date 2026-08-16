@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { Logo } from "./Logo";
+import { useI18n } from "@/lib/i18n";
 
 const navigation = [
   {
@@ -69,6 +70,7 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <aside className="flex h-full w-72 flex-col border-r border-zinc-800 bg-zinc-950">
@@ -95,10 +97,10 @@ export function Sidebar() {
                 >
                   <Icon size={20} />
 
-                  <span>{item.title}</span>
+                  <span>{t(item.title)}</span>
 
                   <span className="ml-auto rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                    Soon
+                    {t("Soon")}
                   </span>
                 </div>
               );
@@ -119,7 +121,7 @@ export function Sidebar() {
                   className="transition-transform duration-200 group-hover:scale-110"
                 />
 
-                <span>{item.title}</span>
+                <span>{t(item.title)}</span>
               </Link>
             );
           })}
@@ -130,7 +132,7 @@ export function Sidebar() {
       <div className="border-t border-zinc-800 p-5">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
           <p className="text-xs uppercase tracking-wide text-zinc-500">
-            Version
+            {t("Version")}
           </p>
 
           <div className="mt-2 flex items-center justify-between">

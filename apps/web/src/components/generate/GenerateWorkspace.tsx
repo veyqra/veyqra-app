@@ -2,6 +2,7 @@
 
 import { Sparkles, CircleAlert, X } from "lucide-react";
 import { useGenerateStore } from "@/stores/generate-store";
+import { useI18n } from "@/lib/i18n";
 
 import { GenerateButton } from "./GenerateButton";
 import { HistoryPanel } from "./HistoryPanel";
@@ -13,6 +14,7 @@ import { InputImagePanel } from "./InputImagePanel";
 import { QueuePanel } from "./QueuePanel";
 
 export function GenerateWorkspace() {
+  const { t } = useI18n();
   const generationError = useGenerateStore(
     (state) => state.generationError
   );
@@ -39,7 +41,7 @@ export function GenerateWorkspace() {
               type="button"
               onClick={() => setGenerationError(null)}
               className="shrink-0 text-red-400/70 transition hover:text-red-200"
-              title="Dismiss error"
+              title={t("Dismiss error")}
             >
               <X className="h-4 w-4" />
             </button>
@@ -52,8 +54,8 @@ export function GenerateWorkspace() {
             <span className="text-violet-300">
               {activeJobs.length === 1
                 ? currentJob.status === "queued"
-                  ? "1 job waiting in ComfyUI..."
-                  : "1 job generating..."
+                  ? t("1 job waiting in ComfyUI...")
+                  : t("1 job generating...")
                 : `${activeJobs.length} jobs active in ComfyUI`}
             </span>
             <span className="font-mono text-xs text-zinc-400">
@@ -76,12 +78,12 @@ export function GenerateWorkspace() {
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-violet-400" />
               <h2 className="text-xl font-semibold">
-                Generation settings
+                {t("Generation settings")}
               </h2>
             </div>
 
             <p className="mt-2 text-sm text-zinc-500">
-              Configure the prompt, model and output parameters.
+              {t("Configure the prompt, model and output parameters.")}
             </p>
           </div>
 

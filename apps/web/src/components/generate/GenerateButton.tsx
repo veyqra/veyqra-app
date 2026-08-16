@@ -11,11 +11,13 @@ import {
 import { uploadGenerationImage } from "@/services/uploads-api";
 import { useGenerateStore } from "@/stores/generate-store";
 import type { GenerationJob } from "@/types/generate";
+import { useI18n } from "@/lib/i18n";
 
 const POLL_INTERVAL_MS = 1_000;
 const POLL_TIMEOUT_MS = 15 * 60_000;
 
 export function GenerateButton() {
+  const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const prompt = useGenerateStore((state) => state.prompt);
 
@@ -69,7 +71,7 @@ export function GenerateButton() {
         !uploadedInputFilename
       ) {
         throw new Error(
-          "Select an input image before generating."
+          t("Select an input image before generating.")
         );
       }
 
@@ -105,7 +107,7 @@ export function GenerateButton() {
       const message =
         error instanceof Error
           ? error.message
-          : "Generation failed.";
+          : t("Generation failed");
       setGenerationError(message);
       console.error(
         "Unable to generate image:",
@@ -120,7 +122,8 @@ export function GenerateButton() {
     try {
       const finishedJob = await pollGeneration(
         jobId,
-        (job) => updateJob(job.id, job)
+        (job) => updateJob(job.id, job),
+        t("Generation polling timed out")
       );
 
       updateJob(finishedJob.id, finishedJob);
@@ -136,7 +139,7 @@ export function GenerateButton() {
 
       if (finishedJob.status === "failed") {
         const message =
-          finishedJob.error ?? "Generation failed.";
+          finishedJob.error ?? t("Generation failed");
         setGenerationError(message);
         console.error(message);
       }
@@ -144,7 +147,7 @@ export function GenerateButton() {
       const message =
         error instanceof Error
           ? error.message
-          : "Unable to monitor generation.";
+          : t("Unable to monitor generation.");
       setGenerationError(message);
       console.error(
         `Unable to monitor generation ${jobId}:`,
@@ -166,7 +169,7 @@ export function GenerateButton() {
       const message =
         error instanceof Error
           ? error.message
-          : "Unable to cancel generation.";
+          : t("Unable to cancel generation.");
       setGenerationError(message);
       console.error("Unable to cancel generation:", error);
     }
@@ -187,12 +190,12 @@ export function GenerateButton() {
         {isSubmitting ? (
           <>
             <LoaderCircle className="h-5 w-5 animate-spin" />
-            Adding to queue...
+            {t("Adding to queue...")}
           </>
         ) : (
           <>
             <Play className="h-5 w-5" />
-            Generate
+            {t("Generate")}
           </>
         )}
       </button>
@@ -202,7 +205,7 @@ export function GenerateButton() {
           onClick={() => void handleCancel()}
           className="w-full rounded-xl border border-red-900/60 bg-red-950/20 px-5 py-3 text-sm font-medium text-red-300 transition hover:bg-red-950/40"
         >
-          Cancel latest job
+          {t("Cancel latest job")}
         </button>
       )}
     </div>
@@ -211,7 +214,8 @@ export function GenerateButton() {
 
 async function pollGeneration(
   jobId: string,
-  onUpdate: (job: GenerationJob) => void
+  onUpdate: (job: GenerationJob) => void,
+  timeoutMessage: string
 ): Promise<GenerationJob> {
   const startedAt = Date.now();
 
@@ -231,7 +235,7 @@ async function pollGeneration(
     await wait(POLL_INTERVAL_MS);
   }
 
-  throw new Error("Generation polling timed out");
+  throw new Error(timeoutMessage);
 }
 
 function wait(milliseconds: number): Promise<void> {

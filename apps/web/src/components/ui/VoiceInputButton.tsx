@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { LoaderCircle, Mic, MicOff } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 type VoiceInputButtonProps = {
   onTranscript: (transcript: string) => void;
@@ -56,6 +57,7 @@ export function VoiceInputButton({
   onTranscript,
   disabled = false,
 }: VoiceInputButtonProps) {
+  const { locale, t } = useI18n();
   const isSupported = useSyncExternalStore(
     subscribeToSpeechRecognitionSupport,
     getSpeechRecognitionSupport,
@@ -92,7 +94,7 @@ export function VoiceInputButton({
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = navigator.language || "en-US";
+    recognition.lang = locale === "de" ? "de-DE" : "en-US";
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -121,7 +123,7 @@ export function VoiceInputButton({
     };
 
     recognition.onerror = (event) => {
-      setError(getSpeechRecognitionError(event.error));
+      setError(t(getSpeechRecognitionError(event.error)));
     };
 
     recognition.onend = () => {
@@ -136,7 +138,7 @@ export function VoiceInputButton({
     } catch {
       recognitionRef.current = null;
       setIsListening(false);
-      setError("Voice input could not be started.");
+      setError(t("Voice input could not be started."));
     }
   }
 
@@ -152,14 +154,14 @@ export function VoiceInputButton({
         disabled={disabled}
         aria-label={
           isListening
-            ? "Stop voice input"
-            : "Start voice input"
+            ? t("Stop voice input")
+            : t("Start voice input")
         }
         aria-pressed={isListening}
         title={
           isListening
-            ? "Stop voice input"
-            : "Start voice input"
+            ? t("Stop voice input")
+            : t("Start voice input")
         }
         className={`flex h-11 w-11 items-center justify-center rounded-xl border transition disabled:cursor-not-allowed disabled:opacity-40 ${
           isListening

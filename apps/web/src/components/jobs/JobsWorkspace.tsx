@@ -24,8 +24,10 @@ import {
 } from "@/services/generation-api";
 
 import type { GenerationJob } from "@/types/generate";
+import { useI18n } from "@/lib/i18n";
 
 export function JobsWorkspace() {
+  const { t } = useI18n();
   const [jobs, setJobs] =
     useState<GenerationJob[]>([]);
 
@@ -199,32 +201,32 @@ export function JobsWorkspace() {
     <div className="space-y-6">
       <section>
         <h1 className="text-3xl font-semibold tracking-tight text-white">
-          Jobs
+          {t("Jobs")}
         </h1>
 
         <p className="mt-2 text-sm text-zinc-500">
-          Monitor local generation jobs and queue activity.
+          {t("Monitor local generation jobs and queue activity.")}
         </p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <JobStat
-          label="Total"
+          label={t("Total")}
           value={stats.total}
         />
 
         <JobStat
-          label="Active"
+          label={t("Active")}
           value={stats.running}
         />
 
         <JobStat
-          label="Completed"
+          label={t("Completed")}
           value={stats.completed}
         />
 
         <JobStat
-          label="Failed"
+          label={t("Failed")}
           value={stats.failed}
         />
       </section>
@@ -241,7 +243,7 @@ export function JobsWorkspace() {
                   event.target.value
                 )
               }
-              placeholder="Search jobs..."
+              placeholder={t("Search jobs...")}
               className="w-full rounded-xl border border-zinc-800 bg-zinc-950 py-3 pl-11 pr-4 text-sm outline-none transition placeholder:text-zinc-600 focus:border-violet-500"
             />
           </div>
@@ -262,7 +264,7 @@ export function JobsWorkspace() {
               }`}
             />
 
-            Refresh
+            {t("Refresh")}
           </button>
         </div>
       </section>
@@ -279,7 +281,7 @@ export function JobsWorkspace() {
             <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-violet-400" />
 
             <p className="mt-4">
-              Loading generation jobs...
+              {t("Loading generation jobs...")}
             </p>
           </div>
         </div>
@@ -289,7 +291,7 @@ export function JobsWorkspace() {
             <Clock3 className="mx-auto h-8 w-8" />
 
             <p className="mt-3 text-sm">
-              No generation jobs found.
+              {t("No generation jobs found.")}
             </p>
           </div>
         </div>
@@ -337,6 +339,7 @@ function JobCard({
     id: string
   ) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const active =
     job.status === "queued" ||
     job.status === "running";
@@ -389,7 +392,7 @@ function JobCard({
                 className="flex items-center gap-2 self-start rounded-lg border border-red-900/60 bg-red-950/20 px-3 py-2 text-xs text-red-300 transition hover:bg-red-950/40"
               >
                 <Ban className="h-4 w-4" />
-                Cancel
+                {t("Cancel")}
               </button>
             )}
           </div>
@@ -397,7 +400,7 @@ function JobCard({
           <div className="mt-5">
             <div className="mb-2 flex items-center justify-between text-xs">
               <span className="text-zinc-500">
-                Progress
+                {t("Progress")}
               </span>
 
               <span className="font-medium text-zinc-300">
@@ -417,7 +420,7 @@ function JobCard({
 
           <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-xs text-zinc-500">
             <span>
-              Created:{" "}
+              {t("Created")}:{" "}
               {formatDate(
                 job.createdAt
               )}
@@ -440,11 +443,12 @@ function StatusBadge({
 }: {
   status: GenerationJob["status"];
 }) {
+  const { t } = useI18n();
   if (status === "completed") {
     return (
       <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400">
         <CheckCircle2 className="h-3.5 w-3.5" />
-        Completed
+        {t("Completed")}
       </span>
     );
   }
@@ -453,7 +457,7 @@ function StatusBadge({
     return (
       <span className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-400">
         <XCircle className="h-3.5 w-3.5" />
-        Failed
+        {t("Failed")}
       </span>
     );
   }
@@ -462,7 +466,7 @@ function StatusBadge({
     return (
       <span className="flex items-center gap-1.5 rounded-full bg-zinc-700/40 px-2.5 py-1 text-xs font-medium text-zinc-400">
         <Ban className="h-3.5 w-3.5" />
-        Cancelled
+        {t("Cancelled")}
       </span>
     );
   }
@@ -472,8 +476,8 @@ function StatusBadge({
       <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
 
       {status === "queued"
-        ? "Queued"
-        : "Running"}
+        ? t("Queued")
+        : t("Running")}
     </span>
   );
 }

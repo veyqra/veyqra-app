@@ -8,9 +8,11 @@ import {
 } from "lucide-react";
 
 import { useGenerateStore } from "@/stores/generate-store";
+import { useI18n } from "@/lib/i18n";
 import { ImageReuseActions } from "./ImageReuseActions";
 
 export function HistoryPanel() {
+  const { t } = useI18n();
   const history = useGenerateStore((state) => state.history);
   const previewImageUrl = useGenerateStore(
     (state) => state.previewImageUrl
@@ -44,11 +46,11 @@ export function HistoryPanel() {
 
           <div>
             <h2 className="text-xl font-semibold">
-              Generation history
+              {t("Generation history")}
             </h2>
 
             <p className="mt-1 text-sm text-zinc-500">
-              Recently generated images in this session.
+              {t("Recently generated images in this session.")}
             </p>
           </div>
         </div>
@@ -58,7 +60,7 @@ export function HistoryPanel() {
             <button
               type="button"
               onClick={() => showHistoryImage(-1)}
-              aria-label="Show previous history image"
+              aria-label={t("Show previous history image")}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-300 transition hover:border-violet-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -73,7 +75,7 @@ export function HistoryPanel() {
             <button
               type="button"
               onClick={() => showHistoryImage(1)}
-              aria-label="Show next history image"
+              aria-label={t("Show next history image")}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-300 transition hover:border-violet-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             >
               <ChevronRight className="h-5 w-5" />
@@ -86,7 +88,7 @@ export function HistoryPanel() {
         <div className="flex min-h-36 items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-950">
           <div className="text-center text-zinc-600">
             <ImageIcon className="mx-auto h-6 w-6" />
-            <p className="mt-2 text-sm">No images yet</p>
+            <p className="mt-2 text-sm">{t("No images yet")}</p>
           </div>
         </div>
       ) : (
