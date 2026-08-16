@@ -86,6 +86,16 @@ run() {
   "$@"
 }
 
+create_python_venv() {
+  local venv_dir="$1"
+
+  # Linux normally creates both executable symlinks and a lib64 -> lib link.
+  # NTFS/exFAT mounts commonly reject those links, so use copies and provide a
+  # regular lib64 directory. This also resumes a partially created venv safely.
+  run mkdir -p "${venv_dir}/lib64"
+  run "${PYTHON_BIN}" -m venv --copies "${venv_dir}"
+}
+
 confirm() {
   local prompt="$1"
   local answer=""
@@ -612,7 +622,7 @@ install_veyqra_dependencies() {
   run npm ci --prefix "${REPO_ROOT}"
 
   if [[ ! -x "${api_python}" ]]; then
-    run "${PYTHON_BIN}" -m venv "${REPO_ROOT}/apps/api/.venv"
+    create_python_venv "${REPO_ROOT}/apps/api/.venv"
   fi
 
   run "${api_python}" -m pip install --upgrade pip wheel setuptools
@@ -781,7 +791,7 @@ run mkdir -p "${INSTALL_ROOT}"
 clone_or_update_repo "ComfyUI" "${COMFYUI_REPO}" "${COMFYUI_DIR}"
 
 if [[ ! -x "${COMFYUI_PYTHON}" ]]; then
-  run "${PYTHON_BIN}" -m venv "${COMFYUI_VENV}"
+  create_python_venv "${COMFYUI_VENV}"
 fi
 
 run "${COMFYUI_PYTHON}" -m pip install --upgrade pip wheel setuptools
