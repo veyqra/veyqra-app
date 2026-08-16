@@ -273,6 +273,9 @@ configuration.
 Run `scripts/install-linux.sh --help` for all options.
 In non-interactive runs, a previously selected installation is reused; otherwise
 the installer uses Veyqra's managed data directory.
+On Linux-mounted NTFS or exFAT volumes, the installer automatically creates
+symlink-free Python environments and installs frontend dependencies without npm
+workspace links.
 
 ### Automated Windows installer
 
@@ -281,6 +284,10 @@ Run the PowerShell installer from the repository root:
 ```powershell
 scripts\install-windows.cmd
 ```
+
+Interactive runs ask separately for the Veyqra data/install directory, the
+ComfyUI directory, and optional FLUX or SDXL model downloads. The final
+installation plan requires an explicit `y` or `n` confirmation.
 
 It checks Git, Python 3.11+, Node.js 22+, and npm; detects or installs ComfyUI;
 creates isolated Python environments; installs the required custom nodes; and

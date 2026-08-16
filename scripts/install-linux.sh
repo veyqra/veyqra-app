@@ -96,6 +96,23 @@ create_python_venv() {
   run "${PYTHON_BIN}" -m venv --copies "${venv_dir}"
 }
 
+filesystem_supports_symlinks() {
+  local probe_dir
+  local probe_link
+
+  probe_dir="$(mktemp -d "${REPO_ROOT}/.veyqra-symlink-test.XXXXXX")" || return 1
+  probe_link="${probe_dir}/link"
+
+  if ln -s target "${probe_link}" 2>/dev/null; then
+    unlink "${probe_link}"
+    rmdir "${probe_dir}"
+    return 0
+  fi
+
+  rmdir "${probe_dir}"
+  return 1
+}
+
 confirm() {
   local prompt="$1"
   local answer=""
@@ -619,7 +636,16 @@ install_veyqra_dependencies() {
   local api_python="${REPO_ROOT}/apps/api/.venv/bin/python"
 
   log "Installing Veyqra dependencies"
-  run npm ci --prefix "${REPO_ROOT}"
+  if [[ "${DRY_RUN}" == false ]] && ! filesystem_supports_symlinks; then
+    warn "The repository filesystem does not support symlinks; installing frontend dependencies without workspace or binary links."
+    run npm install \
+      --prefix "${REPO_ROOT}/apps/web" \
+      --workspaces=false \
+      --package-lock=false \
+      --bin-links=false
+  else
+    run npm ci --prefix "${REPO_ROOT}"
+  fi
 
   if [[ ! -x "${api_python}" ]]; then
     create_python_venv "${REPO_ROOT}/apps/api/.venv"

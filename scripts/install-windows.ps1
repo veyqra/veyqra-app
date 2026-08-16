@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$InstallDir = (Join-Path $env:LOCALAPPDATA "Veyqra"),
+    [string]$InstallDir,
     [string]$ComfyUIDir,
     [ValidateSet("Auto", "Nvidia", "Amd", "Cpu")]
     [string]$Gpu = "Auto",
@@ -119,6 +119,22 @@ function Test-ComfyUIDirectory {
         (Test-Path (Join-Path $Path "comfy") -PathType Container)
 }
 
+function Resolve-InstallDirectory {
+    $defaultDirectory = Join-Path $env:LOCALAPPDATA "Veyqra"
+    if ($InstallDir) {
+        return [System.IO.Path]::GetFullPath($InstallDir)
+    }
+    if ($Yes) {
+        return [System.IO.Path]::GetFullPath($defaultDirectory)
+    }
+
+    $answer = Read-Host "Veyqra data/install directory [$defaultDirectory]"
+    if ([string]::IsNullOrWhiteSpace($answer)) {
+        $answer = $defaultDirectory
+    }
+    return [System.IO.Path]::GetFullPath($answer)
+}
+
 function Resolve-ComfyUIDirectory {
     $managed = [System.IO.Path]::GetFullPath((Join-Path $InstallDir "ComfyUI"))
 
@@ -145,7 +161,14 @@ function Resolve-ComfyUIDirectory {
 
     $detected = @($candidates | Select-Object -Unique | Where-Object { Test-ComfyUIDirectory $_ })
     if ($detected.Count -eq 0) {
-        return $managed
+        if ($Yes) {
+            return $managed
+        }
+        $custom = Read-Host "ComfyUI directory [$managed]"
+        if ([string]::IsNullOrWhiteSpace($custom)) {
+            $custom = $managed
+        }
+        return [System.IO.Path]::GetFullPath($custom)
     }
     if ($Yes) {
         return [System.IO.Path]::GetFullPath($detected[0])
@@ -173,7 +196,11 @@ function Resolve-ComfyUIDirectory {
             return [System.IO.Path]::GetFullPath($detected[$choice - 1])
         }
         if ($choice -eq ($detected.Count + 1)) {
-            return $managed
+            $custom = Read-Host "ComfyUI directory [$managed]"
+            if ([string]::IsNullOrWhiteSpace($custom)) {
+                $custom = $managed
+            }
+            return [System.IO.Path]::GetFullPath($custom)
         }
         if ($choice -eq ($detected.Count + 2)) {
             $custom = Read-Host "ComfyUI directory"
@@ -328,8 +355,74 @@ function Confirm-Installation {
     if ($Yes -or $DryRun) {
         return $true
     }
-    $answer = Read-Host "Continue with this installation plan? [y/N]"
-    return $answer -match "^[Yy]$"
+    while ($true) {
+        $answer = Read-Host "Continue with this installation plan? [y/n]"
+        if ($answer -match "^[Yy]$") {
+            return $true
+        }
+        if ($answer -match "^[Nn]$") {
+            return $false
+        }
+        Write-WarningMessage "Please enter y or n."
+    }
+}
+
+function Normalize-ModelSelection {
+    param([string[]]$Selection)
+
+    $normalized = @(
+        $Selection |
+            ForEach-Object { $_.Split(",") } |
+            ForEach-Object { $_.Trim().ToLowerInvariant() } |
+            Where-Object { $_ -and $_ -ne "none" }
+    )
+    if ($normalized -contains "all") {
+        return @("flux-schnell", "flux-dev", "flux-fill", "sdxl-base")
+    }
+
+    $normalized = @($normalized | ForEach-Object {
+        switch ($_) {
+            "1" { "flux-schnell" }
+            "2" { "flux-dev" }
+            "3" { "flux-fill" }
+            "4" { "sdxl-base" }
+            "sdxl" { "sdxl-base" }
+            default { $_ }
+        }
+    } | Select-Object -Unique)
+
+    $allowedModels = @("flux-schnell", "flux-dev", "flux-fill", "sdxl-base")
+    foreach ($model in $normalized) {
+        if ($allowedModels -notcontains $model) {
+            throw "Unknown model '$model'. Use flux-schnell, flux-dev, flux-fill, sdxl-base, all, or none."
+        }
+    }
+    return $normalized
+}
+
+function Select-Models {
+    if ($Models.Count -gt 0) {
+        return @(Normalize-ModelSelection -Selection $Models)
+    }
+    if ($Yes) {
+        return @()
+    }
+
+    $answer = Read-Host "Download optional official image model weights? [y/N]"
+    if ($answer -notmatch "^[Yy]$") {
+        return @()
+    }
+
+    Write-Host "`nChoose one or more models (comma-separated):"
+    Write-Host "  [1] FLUX.1 Schnell   ~23.8 GB  Apache-2.0"
+    Write-Host "  [2] FLUX.1 Dev       ~23.8 GB  FLUX dev non-commercial license"
+    Write-Host "  [3] FLUX.1 Fill Dev  ~23.8 GB  FLUX dev non-commercial license"
+    Write-Host "  [4] SDXL Base 1.0     ~6.94 GB  CreativeML Open RAIL++-M"
+    $selection = Read-Host "Model selection [1]"
+    if ([string]::IsNullOrWhiteSpace($selection)) {
+        $selection = "1"
+    }
+    return @(Normalize-ModelSelection -Selection @($selection))
 }
 
 foreach ($required in @("git.exe", "node.exe", "npm.cmd")) {
@@ -344,7 +437,9 @@ if ($nodeMajor -lt 22) {
 }
 
 Select-Python
+$InstallDir = Resolve-InstallDirectory
 $resolvedComfyDir = Resolve-ComfyUIDirectory
+$resolvedModels = @(Select-Models)
 $resolvedGpu = Resolve-GpuBackend
 $comfyUrl = "http://${ListenAddress}:$Port"
 
@@ -355,6 +450,7 @@ Write-Info "ComfyUI:       $resolvedComfyDir"
 Write-Info "Python:        $script:PythonCommand $($script:PythonPrefix -join ' ')"
 Write-Info "GPU backend:   $resolvedGpu"
 Write-Info "ComfyUI URL:   $comfyUrl"
+Write-Info "Models:         $(if ($resolvedModels.Count -gt 0) { $resolvedModels -join ',' } else { 'none' })"
 if ($TorchIndexUrl) {
     Write-Info "PyTorch index: $TorchIndexUrl"
 }
@@ -362,6 +458,11 @@ if ($TorchIndexUrl) {
 if (-not (Confirm-Installation)) {
     Write-Info "Installation cancelled."
     exit 0
+}
+
+$requiresToken = @($resolvedModels | Where-Object { $_ -like "flux-*" }).Count -gt 0
+if ($requiresToken -and -not $env:HF_TOKEN -and -not $env:HUGGING_FACE_HUB_TOKEN) {
+    throw "HF_TOKEN is required to download optional FLUX models. The token is not stored by Veyqra."
 }
 
 Write-Step "Installing ComfyUI"
@@ -417,35 +518,13 @@ foreach ($directory in @(
 
 Install-CustomNodes -Directory (Join-Path $resolvedComfyDir "custom_nodes") -ComfyPython $comfyPython
 
-if ($Models.Count -gt 0) {
-    $normalizedModels = @(
-        $Models |
-            ForEach-Object { $_.Split(",") } |
-            ForEach-Object { $_.Trim().ToLowerInvariant() } |
-            Where-Object { $_ }
-    )
-    if ($normalizedModels -contains "all") {
-        $normalizedModels = @("flux-schnell", "flux-dev", "flux-fill", "sdxl-base")
-    }
-    $normalizedModels = @($normalizedModels | ForEach-Object {
-        if ($_ -eq "sdxl") { "sdxl-base" } else { $_ }
-    })
-    $allowedModels = @("flux-schnell", "flux-dev", "flux-fill", "sdxl-base")
-    foreach ($model in $normalizedModels) {
-        if ($allowedModels -notcontains $model) {
-            throw "Unknown model '$model'. Use flux-schnell, flux-dev, flux-fill, sdxl-base, all, or none."
-        }
-    }
-    $requiresToken = @($normalizedModels | Where-Object { $_ -like "flux-*" }).Count -gt 0
-    if ($requiresToken -and -not $env:HF_TOKEN -and -not $env:HUGGING_FACE_HUB_TOKEN) {
-        throw "HF_TOKEN is required to download optional FLUX models. The token is not stored by Veyqra."
-    }
+if ($resolvedModels.Count -gt 0) {
     Invoke-SelectedPython -Arguments (@(
             (Join-Path $PSScriptRoot "download-comfyui-models.py"),
             "--comfyui-dir", $resolvedComfyDir,
             "--manifest", (Join-Path $projectRoot "config\comfyui-models.json"),
             "--models"
-        ) + $normalizedModels)
+        ) + $resolvedModels)
 }
 
 Write-Step "Installing Veyqra dependencies"
