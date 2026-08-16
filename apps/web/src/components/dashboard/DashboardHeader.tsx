@@ -1,12 +1,6 @@
 import { Sparkles } from "lucide-react";
 
-type DashboardHeaderProps = {
-  userName?: string;
-};
-
-export function DashboardHeader({
-  userName = "User",
-}: DashboardHeaderProps) {
+export function DashboardHeader() {
   return (
     <section className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 p-8">
       <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-violet-600/20 blur-3xl" />
@@ -19,7 +13,7 @@ export function DashboardHeader({
           </div>
 
           <h1 className="text-4xl font-bold tracking-tight">
-            Welcome back, {userName} 👋
+            Welcome to Veyqra
           </h1>
 
           <p className="mt-3 max-w-2xl text-zinc-400">

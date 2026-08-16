@@ -31,7 +31,7 @@ try {
     Write-Host "Backend startet auf http://localhost:8000 ..."
     $apiProcess = Start-Process `
         -FilePath $apiUvicorn `
-        -ArgumentList "app.main:app", "--reload" `
+        -ArgumentList "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000" `
         -WorkingDirectory $apiDirectory `
         -NoNewWindow `
         -PassThru

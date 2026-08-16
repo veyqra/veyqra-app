@@ -1,4 +1,8 @@
 import { apiRequest } from "@/lib/api-client";
+import {
+  toOptionalSameOriginApiUrl,
+  toSameOriginApiUrl,
+} from "@/lib/api-resource-url";
 import type { DashboardData } from "@/types/dashboard";
 import type {
   GeneratedImage,
@@ -63,8 +67,10 @@ function toGeneratedImage(
   return {
     id: image.id,
     prompt: image.prompt,
-    imageUrl: image.image_url,
-    maskPreviewUrl: image.mask_preview_url ?? null,
+    imageUrl: toSameOriginApiUrl(image.image_url),
+    maskPreviewUrl: toOptionalSameOriginApiUrl(
+      image.mask_preview_url
+    ),
     modelName: image.model_name,
     width: image.width,
     height: image.height,
@@ -84,7 +90,9 @@ function toGenerationJob(
     createdAt: job.created_at,
     error: job.error,
     maskPrompt: job.mask_prompt ?? null,
-    maskPreviewUrl: job.mask_preview_url ?? null,
+    maskPreviewUrl: toOptionalSameOriginApiUrl(
+      job.mask_preview_url
+    ),
     image: job.image
       ? toGeneratedImage(job.image)
       : null,

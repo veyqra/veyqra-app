@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
+import { toSameOriginApiUrl } from "@/lib/api-resource-url";
 import type {
   HistoryItem,
   HistoryResponse,
@@ -38,7 +39,7 @@ function mapHistoryItem(
     modelName: item.model_name,
     loraId: item.lora_id,
     loraStrength: item.lora_strength,
-    imageUrl: item.image_url,
+    imageUrl: toSameOriginApiUrl(item.image_url),
     imageFilename: item.image_filename,
     width: item.width,
     height: item.height,

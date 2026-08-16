@@ -200,7 +200,7 @@
   "248": {
     "inputs": {
       "clip_l": "",
-      "t5xxl": "A neutral example prompt.",
+      "t5xxl": "Replace the selected object while preserving lighting and composition.",
       "guidance": 5.3,
       "clip": [
         "249",
@@ -227,7 +227,7 @@
   "250": {
     "inputs": {
       "clip_l": "",
-      "t5xxl": "A neutral example prompt.",
+      "t5xxl": "",
       "guidance": 3.5,
       "clip": [
         "249",

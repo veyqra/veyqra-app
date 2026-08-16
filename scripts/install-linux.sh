@@ -774,7 +774,7 @@ write_install_config "${INSTALL_CONFIG}" "${COMFYUI_DIR}" "${COMFYUI_PYTHON}"
 upsert_env "${REPO_ROOT}/apps/api/.env" \
   "VEYQRA_COMFYUI_URL" "${COMFYUI_URL}"
 upsert_env "${REPO_ROOT}/apps/api/.env" \
-  "VEYQRA_PUBLIC_API_URL" "http://localhost:8000"
+  "VEYQRA_PUBLIC_API_URL" ""
 upsert_env "${REPO_ROOT}/apps/api/.env" \
   "VEYQRA_CORS_ORIGINS" "http://localhost:3000,http://127.0.0.1:3000"
 

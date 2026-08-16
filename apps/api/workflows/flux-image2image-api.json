@@ -28,7 +28,7 @@
   "3": {
     "inputs": {
       "lora_name": "example-lora.safetensors",
-      "strength_model": 1.25,
+      "strength_model": 1.0,
       "model": [
         "2",
         0
@@ -54,7 +54,7 @@
   "5": {
     "inputs": {
       "clip_l": "",
-      "t5xxl": "A neutral example prompt.",
+      "t5xxl": "A cinematic landscape at golden hour.",
       "guidance": 3.6,
       "clip": [
         "4",

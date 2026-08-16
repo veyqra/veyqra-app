@@ -1,6 +1,6 @@
 const API_URL =
   process.env.NEXT_PUBLIC_VEYQRA_API_URL ??
-  "http://localhost:8000/api/v1";
+  "/api/v1";
 
 export type UploadedImage = {
   filename: string;

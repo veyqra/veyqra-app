@@ -40,7 +40,7 @@
   },
   "4": {
     "inputs": {
-      "text": "A neutral example prompt.",
+      "text": "A cinematic landscape at golden hour.",
       "clip": [
         "11",
         1
@@ -53,7 +53,7 @@
   },
   "5": {
     "inputs": {
-      "text": "A neutral example prompt.",
+      "text": "low quality, blurry, artifacts, distorted details",
       "clip": [
         "11",
         1
@@ -96,8 +96,8 @@
   "11": {
     "inputs": {
       "lora_name": "example-lora.safetensors",
-      "strength_model": 1.15,
-      "strength_clip": 1.07,
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
       "model": [
         "2",
         0

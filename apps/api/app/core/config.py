@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     )
 
     public_api_url: str = Field(
-        default="http://localhost:8000",
+        default="",
         alias="VEYQRA_PUBLIC_API_URL",
     )
 

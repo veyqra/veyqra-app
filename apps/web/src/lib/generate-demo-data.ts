@@ -20,7 +20,7 @@ export const generateLoras: GenerateLora[] = [
   },
   {
     id: "example",
-    name: "Example",
+    name: "Example LoRA",
     triggerWord: "example",
   },
 ];

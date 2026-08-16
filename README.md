@@ -251,22 +251,29 @@ VEYQRA_API_HOST=0.0.0.0
 VEYQRA_API_PORT=8000
 VEYQRA_CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 VEYQRA_COMFYUI_URL=http://127.0.0.1:8188
-VEYQRA_PUBLIC_API_URL=http://localhost:8000
+VEYQRA_PUBLIC_API_URL=
 ```
 
-`VEYQRA_PUBLIC_API_URL` is used to create public history and mask image URLs.
-When the API is accessed from another machine, set it to an address that the
-browser can reach.
+`VEYQRA_PUBLIC_API_URL` is used to create history and mask image URLs. Keep it
+empty when the frontend's same-origin API proxy is used. Set an absolute URL
+only when clients access the API directly.
 
 ### 4. Configure the frontend
 
 Create `apps/web/.env.local` if a custom API address is needed:
 
 ```dotenv
-NEXT_PUBLIC_VEYQRA_API_URL=http://localhost:8000/api/v1
+NEXT_PUBLIC_VEYQRA_API_URL=/api/v1
+VEYQRA_ALLOWED_DEV_ORIGINS=
 ```
 
-The frontend uses this value by default when the variable is not set.
+The frontend uses this same-origin path by default and proxies API requests to
+the local FastAPI service. This also avoids mixed-content errors when Veyqra is
+served over HTTPS.
+
+For development access from other devices, set
+`VEYQRA_ALLOWED_DEV_ORIGINS` to a comma-separated list of local hostnames or IP
+addresses. Keep machine-specific values in the untracked `.env.local` file.
 
 ### 5. Install local translation models
 
