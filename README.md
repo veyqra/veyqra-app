@@ -55,12 +55,9 @@ interface without hiding the flexibility of the local AI tooling underneath.
 - Local notifications for completed, failed, and cancelled jobs
 - Responsive desktop and mobile navigation
 
-<!-- SCREENSHOT: Mobile interface
-Suggested file: docs/screenshots/generate-mobile.webp
-Replace this marker with:
-![Veyqra mobile Generate interface](docs/screenshots/generate-mobile.webp)
-Show the mobile navigation or the responsive single-column Generate layout.
--->
+<p align="center">
+  <img src="docs/screenshots/generate-mobile.jpeg" width="420" alt="Veyqra mobile Generate interface with image preview and generation queue">
+</p>
 
 ## Not implemented yet
 
@@ -120,7 +117,7 @@ veyqra/
 │           ├── stores/           # Zustand stores
 │           └── types/            # Frontend types
 ├── docs/                          # Vision and architecture drafts
-├── docker-compose.yml             # Development scaffold
+├── docker-compose.yml             # Web and API containers
 └── package.json                   # Workspace scripts
 ```
 
@@ -158,11 +155,56 @@ The automated installer currently offers official FLUX model downloads. SDXL
 checkpoints and SDXL LoRAs must be installed in ComfyUI separately; Veyqra
 then discovers them through the model catalog.
 
+## Quick start with Docker Compose
+
+Docker Compose runs the Veyqra web interface and API. ComfyUI, custom nodes,
+models, and GPU drivers remain installed on the host and are not copied into
+the containers.
+
+ComfyUI must accept connections from Docker. When using the Veyqra-managed
+ComfyUI installation on Linux, start it with:
+
+```bash
+VEYQRA_COMFYUI_HOST=0.0.0.0 scripts/start-comfyui.sh
+```
+
+Then build and start Veyqra:
+
+```bash
+docker compose up --build -d
+```
+
+Open <http://localhost:3000>. View the logs or stop the services with:
+
+```bash
+docker compose logs -f
+docker compose down
+```
+
+Generated images, uploads, job metadata, history, and installed translation
+models remain in `apps/api/data`. The API is exposed only on
+`http://127.0.0.1:8000`; browser requests use the frontend's same-origin proxy.
+
+Compose connects to ComfyUI at `http://host.docker.internal:8188` by default.
+Override the address, ports, or container user in a root `.env` file when
+needed:
+
+```dotenv
+VEYQRA_COMFYUI_URL=http://host.docker.internal:8188
+VEYQRA_WEB_PORT=3000
+VEYQRA_API_PORT=8000
+VEYQRA_UID=1000
+VEYQRA_GID=1000
+```
+
+On Linux, use your numeric `id -u` and `id -g` values if they are not `1000`.
+Do not expose ComfyUI's port to untrusted networks.
+
 ## Installation
 
 ### Automated Linux installer
 
-The first automated installer is available for Linux:
+The automated installer for Linux is available here:
 
 ```bash
 scripts/install-linux.sh
@@ -225,6 +267,50 @@ are never written to Veyqra's configuration.
 Run `scripts/install-linux.sh --help` for all options.
 In non-interactive runs, a previously selected installation is reused; otherwise
 the installer uses Veyqra's managed data directory.
+
+### Automated Windows installer
+
+Run the PowerShell installer from the repository root:
+
+```powershell
+scripts\install-windows.cmd
+```
+
+It checks Git, Python 3.11+, Node.js 22+, and npm; detects or installs ComfyUI;
+creates isolated Python environments; installs the required custom nodes; and
+configures the Veyqra API. Existing ComfyUI virtual environments and portable
+Python installations are reused when possible.
+
+Useful PowerShell options:
+
+```powershell
+scripts\install-windows.ps1 `
+  -ComfyUIDir "D:\AI\ComfyUI" `
+  -Gpu Nvidia `
+  -WithManager `
+  -WithTranslations
+```
+
+Other options include `-InstallDir`, `-Python`, `-TorchIndexUrl`, `-Models`,
+`-Update`, `-NoStart`, `-Yes`, and `-DryRun`. Optional FLUX downloads require
+`HF_TOKEN` and accepted Hugging Face model agreements:
+
+```powershell
+$env:HF_TOKEN = "hf_your_token"
+scripts\install-windows.ps1 -Models flux-schnell
+```
+
+NVIDIA and CPU PyTorch packages are selected automatically. Windows AMD builds
+are hardware-specific: reuse an already working AMD ComfyUI installation, use
+the official AMD portable package, or provide its documented package index via
+`-TorchIndexUrl`.
+
+After installation:
+
+```powershell
+scripts\start-comfyui.cmd
+npm run dev:windows
+```
 
 The steps below describe the equivalent manual installation.
 
@@ -463,6 +549,8 @@ used directly as Image to Image or Inpaint input. Reusing a history image only
 prepares the image; it does not overwrite the prompt currently entered in the
 editor.
 
+![Veyqra generation history with reusable images and generation details](docs/screenshots/history-desktop.png)
+
 ## System status and notifications
 
 Local runtime information comes directly from ComfyUI:
@@ -540,26 +628,16 @@ cd apps/api
 The root `npm run lint` and `npm run build` scripts are currently placeholders.
 Use the workspace commands above for real checks.
 
-## Docker
-
-`docker-compose.yml` is currently a development scaffold with mounted source
-directories and exposed ports. The containers do not automatically start the
-web app or API, and they do not configure a GPU or ComfyUI runtime. Starting
-the project locally with `npm run dev` (or the individual `npm run api` and
-`npm run web` commands) is the supported path for the current development
-stage.
-
 ## Roadmap
 
 Planned major work packages:
 
-1. Windows PowerShell installer based on the Linux setup flow
-2. Real AWS account integration and cloud instance status
-3. Robust queue and cancellation management directly through ComfyUI
-4. Training and LoRA workflows
-5. Settings and user accounts
-6. Marketplace and plugin interfaces
-7. Production-ready packaging and deployment
+1. Real AWS account integration and cloud instance status
+2. Robust queue and cancellation management directly through ComfyUI
+3. Training and LoRA workflows
+4. Settings and user accounts
+5. Marketplace and plugin interfaces
+6. Production-ready packaging and deployment
 
 ## Contributing
 

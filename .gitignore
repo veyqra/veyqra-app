@@ -19,6 +19,7 @@ out/
 .env.local
 .env.*.local
 config/local-install.env
+config/local-install.windows.json
 
 # Python
 __pycache__/

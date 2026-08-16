@@ -1,0 +1,15 @@
+.git
+.github
+.next
+**/.next
+node_modules
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.pyc
+apps/api/.env
+apps/api/data
+apps/web/.env.local
+docs
+logs
+*.log

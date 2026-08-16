@@ -10,10 +10,14 @@ import {
   type ReactNode,
 } from "react";
 
-export type Locale = "de" | "en";
-export type LanguagePreference = Locale | "system";
+import {
+  LANGUAGE_COOKIE,
+  resolveLocale,
+  type LanguagePreference,
+  type Locale,
+} from "@/lib/language";
 
-const LANGUAGE_COOKIE = "veyqra-language";
+export type { LanguagePreference, Locale } from "@/lib/language";
 
 const de = {
   Dashboard: "Übersicht",
@@ -266,14 +270,6 @@ type I18nContextValue = {
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
-
-export function resolveLocale(language?: string | null): Locale {
-  return language?.toLowerCase().startsWith("de") ? "de" : "en";
-}
-
-export function isLanguagePreference(value?: string | null): value is LanguagePreference {
-  return value === "system" || value === "de" || value === "en";
-}
 
 export function I18nProvider({
   children,

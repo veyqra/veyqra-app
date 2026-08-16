@@ -7,6 +7,11 @@ const allowedDevOrigins = (
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+const internalApiUrl = (
+  process.env.VEYQRA_INTERNAL_API_URL ??
+  "http://127.0.0.1:8000"
+).replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
   ...(allowedDevOrigins.length > 0
     ? { allowedDevOrigins }
@@ -15,7 +20,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/v1/:path*",
-        destination: "http://127.0.0.1:8000/api/v1/:path*",
+        destination: `${internalApiUrl}/api/v1/:path*`,
       },
     ];
   },

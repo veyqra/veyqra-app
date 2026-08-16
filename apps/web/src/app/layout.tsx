@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies, headers } from "next/headers";
 
+import { I18nProvider } from "@/lib/i18n";
 import {
-  I18nProvider,
+  LANGUAGE_COOKIE,
   isLanguagePreference,
   resolveLocale,
-} from "@/lib/i18n";
+} from "@/lib/language";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,7 +31,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookiePreference = (await cookies()).get(
-    "veyqra-language"
+    LANGUAGE_COOKIE
   )?.value;
   const preference = isLanguagePreference(cookiePreference)
     ? cookiePreference
