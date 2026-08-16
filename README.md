@@ -457,9 +457,9 @@ npm run dev
 
 Press `Ctrl+C` to stop both processes.
 
-Workflow JSON templates are cached by the API process. After editing a file in
-`apps/api/workflows`, restart the backend completely; Python hot reload alone
-does not invalidate the workflow cache.
+Workflow JSON templates are cached by the API process, and changes to JSON files
+do not trigger Uvicorn's Python reload. After editing a file in
+`apps/api/workflows`, stop and restart the backend completely.
 
 On Windows, use PowerShell from the project directory:
 
@@ -473,7 +473,7 @@ The Windows script can also be started directly:
 scripts\start-dev.cmd
 ```
 
-Alternatively, run them in separate terminals.
+Alternatively, run them in separate terminals. On Linux:
 
 Terminal 1:
 
@@ -486,6 +486,9 @@ Terminal 2:
 ```bash
 npm run web
 ```
+
+On Windows, use `npm run api:windows` in the first terminal and `npm run web`
+in the second terminal.
 
 The following addresses will be available:
 
