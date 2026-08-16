@@ -1,6 +1,18 @@
-# Veyqra
+<p align="center">
+  <img src="docs/assets/veyqra-logo.webp" alt="Veyqra logo" width="112">
+</p>
 
-> Create. Train. Deploy.
+<h1 align="center">Veyqra</h1>
+
+<p align="center"><strong>Create. Train. Deploy.</strong></p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/status-early_alpha-8b5cf6" alt="Early Alpha">
+  <img src="https://img.shields.io/badge/platform-Windows-2563eb?logo=windows11" alt="Windows">
+  <img src="https://img.shields.io/badge/platform-Linux-f59e0b?logo=linux&logoColor=white" alt="Linux">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-22c55e" alt="AGPL-3.0"></a>
+  <a href="https://github.com/Comfy-Org/ComfyUI"><img src="https://img.shields.io/badge/backend-ComfyUI-111827" alt="ComfyUI"></a>
+</p>
 
 Veyqra is a local, web-based interface for AI image generation with ComfyUI.
 It connects a responsive Next.js frontend to a FastAPI backend that translates
@@ -11,6 +23,8 @@ functional, while cloud integration, training, authentication, and the
 marketplace are still planned.
 
 ![Veyqra Generate workspace](docs/screenshots/generate-desktop.webp)
+
+<p align="center"><em>Generate locally. Keep control. Skip the ComfyUI complexity.</em></p>
 
 ## Motivation
 
