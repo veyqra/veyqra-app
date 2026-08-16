@@ -98,6 +98,24 @@ confirm() {
   [[ "${answer}" =~ ^[Yy]$ ]]
 }
 
+confirm_required() {
+  local prompt="$1"
+  local answer=""
+
+  if [[ "${ASSUME_YES}" == true ]]; then
+    return 0
+  fi
+
+  while true; do
+    read -r -p "${prompt} [y/n] " answer
+    case "${answer}" in
+      y|Y) return 0 ;;
+      n|N) return 1 ;;
+      *) warn "Please enter y or n." ;;
+    esac
+  done
+}
+
 is_comfyui_directory() {
   local directory="$1"
   [[ -f "${directory}/main.py" ]] && [[ -d "${directory}/comfy" ]]
@@ -751,7 +769,7 @@ if [[ "${GPU_BACKEND}" == "amd" ]] && ! command -v rocminfo >/dev/null 2>&1; the
   warn "rocminfo was not found. This installer installs PyTorch but not the host ROCm driver."
 fi
 
-if ! confirm "Continue with this installation plan?"; then
+if ! confirm_required "Continue with this installation plan?"; then
   info "Installation cancelled."
   exit 0
 fi
