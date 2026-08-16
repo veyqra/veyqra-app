@@ -331,7 +331,7 @@ EOF
 ensure_hugging_face_token() {
   local token
 
-  [[ "${MODEL_SELECTION}" != "none" ]] || return
+  [[ "${MODEL_SELECTION}" != "none" ]] || return 0
   if [[ ",${MODEL_SELECTION}," != *",flux-schnell,"* ]] && \
      [[ ",${MODEL_SELECTION}," != *",flux-dev,"* ]] && \
      [[ ",${MODEL_SELECTION}," != *",flux-fill,"* ]]; then
@@ -367,7 +367,7 @@ ensure_hugging_face_token() {
 download_selected_models() {
   local -a selected=()
 
-  [[ "${MODEL_SELECTION}" != "none" ]] || return
+  [[ "${MODEL_SELECTION}" != "none" ]] || return 0
   IFS=',' read -r -a selected <<<"${MODEL_SELECTION}"
   log "Downloading optional image models"
   run "${PYTHON_BIN}" "${SCRIPT_DIR}/download-comfyui-models.py" \
