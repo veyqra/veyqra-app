@@ -4,7 +4,9 @@
 
 <h1 align="center">Veyqra</h1>
 
-### Generate locally. Keep control. Skip the ComfyUI complexity.
+<p align="center">
+  <strong>Generate locally. Keep control. Skip the ComfyUI complexity.</strong>
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/status-early_alpha-8b5cf6" alt="Early Alpha">
@@ -16,14 +18,13 @@
 
 Veyqra is an open-source interface for local AI image generation powered by ComfyUI.
 
-Use FLUX and SDXL, load LoRAs, queue generations, edit images and browse your history — without having to build or manage ComfyUI node graphs.
+Use FLUX and SDXL, load LoRAs, queue generations, edit images, and browse your history — without having to build or manage ComfyUI node graphs.
 
 > **v0.1.0-alpha**
-> Local generation is working today. Training, cloud integration, authentication and the marketplace are planned.
+>
+> Local generation is working today. Training, cloud integration, authentication, and the marketplace are planned.
 
 ![Veyqra Generate workspace](docs/screenshots/generate-desktop.webp)
-
-<p align="center"><em>Generate locally. Keep control. Skip the ComfyUI complexity.</em></p>
 
 ## Motivation
 
