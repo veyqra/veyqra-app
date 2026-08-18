@@ -15,6 +15,9 @@ GPU_BACKEND="auto"
 PYTHON_BIN=""
 TORCH_INDEX_URL=""
 TORCH_INDEX_OVERRIDDEN=false
+TORCH_PRE=false
+AMD_GFX_ARCH=""
+AMD_SUPPORT_LEVEL=""
 HSA_OVERRIDE=""
 WITH_MANAGER=false
 WITH_TRANSLATIONS=false
@@ -492,26 +495,65 @@ detect_gpu_backend() {
 }
 
 detect_hsa_override() {
-  if [[ "${GPU_BACKEND}" != "amd" ]] || [[ -n "${HSA_OVERRIDE}" ]]; then
-    return
+  # Do not set HSA_OVERRIDE_GFX_VERSION automatically.
+  # Architecture-specific ROCm/TheRock wheels should target the detected
+  # gfx architecture directly. Users can still force an override explicitly.
+  if [[ "${GPU_BACKEND}" == "amd" ]] && [[ -n "${HSA_OVERRIDE}" ]]; then
+    info "Using user-supplied HSA_OVERRIDE_GFX_VERSION=${HSA_OVERRIDE}."
   fi
+}
+
+detect_amd_gfx_arch() {
+  local gfx=""
 
   if command -v rocminfo >/dev/null 2>&1; then
-    if rocminfo 2>/dev/null | grep -Eq 'gfx103[12]'; then
-      HSA_OVERRIDE="10.3.0"
-      warn "Detected an RDNA2 gfx1031/gfx1032 device; startup will use HSA_OVERRIDE_GFX_VERSION=10.3.0."
-    fi
+    gfx="$(
+      rocminfo 2>/dev/null |
+        grep -oE 'gfx[0-9]+' |
+        sort -u |
+        head -n 1
+    )"
+  fi
+
+  if [[ -n "${gfx}" ]]; then
+    AMD_GFX_ARCH="${gfx}"
+    info "Detected AMD GPU architecture: ${AMD_GFX_ARCH}"
+  else
+    AMD_GFX_ARCH=""
+    warn "AMD GPU detected, but its gfx architecture could not be determined from rocminfo."
   fi
 }
 
 set_default_torch_index() {
   if [[ -n "${TORCH_INDEX_URL}" ]]; then
+    if [[ "${GPU_BACKEND}" == "amd" ]]; then
+      AMD_SUPPORT_LEVEL="custom"
+      info "Using user-supplied AMD PyTorch index."
+    fi
     return
   fi
 
   case "${GPU_BACKEND}" in
     amd)
-      TORCH_INDEX_URL="https://download.pytorch.org/whl/rocm6.4"
+      detect_amd_gfx_arch
+
+      case "${AMD_GFX_ARCH}" in
+        gfx1030|gfx1031|gfx1032)
+          TORCH_INDEX_URL="https://rocm.nightlies.amd.com/v2/gfx103X-all/"
+          TORCH_PRE=true
+          AMD_SUPPORT_LEVEL="community/nightly"
+          warn "AMD ${AMD_GFX_ARCH} detected; using community/nightly ROCm wheels."
+          ;;
+        gfx1100|gfx1101|gfx1200|gfx1201)
+          TORCH_INDEX_URL="https://download.pytorch.org/whl/rocm7.2"
+          TORCH_PRE=false
+          AMD_SUPPORT_LEVEL="official"
+          info "AMD ${AMD_GFX_ARCH} detected; using official ROCm PyTorch wheels."
+          ;;
+        *)
+          fail "AMD GPU architecture '${AMD_GFX_ARCH:-unknown}' is not mapped. Use --torch-index-url manually."
+          ;;
+      esac
       ;;
     nvidia)
       TORCH_INDEX_URL="https://download.pytorch.org/whl/cu130"
@@ -628,6 +670,8 @@ write_install_config() {
     printf 'VEYQRA_COMFYUI_HOST=%q\n' "${COMFYUI_HOST}"
     printf 'VEYQRA_COMFYUI_PORT=%q\n' "${COMFYUI_PORT}"
     printf 'VEYQRA_GPU_BACKEND=%q\n' "${GPU_BACKEND}"
+    printf 'VEYQRA_AMD_GFX_ARCH=%q\n' "${AMD_GFX_ARCH}"
+    printf 'VEYQRA_AMD_SUPPORT_LEVEL=%q\n' "${AMD_SUPPORT_LEVEL}"
     printf 'VEYQRA_HSA_OVERRIDE_GFX_VERSION=%q\n' "${HSA_OVERRIDE}"
   } >"${file}"
 }
@@ -797,6 +841,12 @@ info "Install root:   ${INSTALL_ROOT}"
 info "ComfyUI:        ${COMFYUI_DIR}"
 info "Python:         ${PYTHON_BIN}"
 info "GPU backend:    ${GPU_BACKEND}"
+if [[ "${GPU_BACKEND}" == "amd" ]] && [[ -n "${AMD_GFX_ARCH}" ]]; then
+  info "GPU architecture: ${AMD_GFX_ARCH}"
+fi
+if [[ "${GPU_BACKEND}" == "amd" ]] && [[ -n "${AMD_SUPPORT_LEVEL}" ]]; then
+  info "ROCm support:   ${AMD_SUPPORT_LEVEL}"
+fi
 info "PyTorch index:  ${TORCH_INDEX_URL}"
 info "ComfyUI URL:    ${COMFYUI_URL}"
 info "Models:         ${MODEL_SELECTION}"
@@ -820,17 +870,32 @@ if [[ ! -x "${COMFYUI_PYTHON}" ]]; then
   create_python_venv "${COMFYUI_VENV}"
 fi
 
-run "${COMFYUI_PYTHON}" -m pip install --upgrade pip wheel setuptools
+# Some PyTorch builds constrain setuptools. Leave that dependency under
+# PyTorch's control instead of unconditionally upgrading it here.
+run "${COMFYUI_PYTHON}" -m pip install --upgrade pip wheel
+
 if [[ "${GPU_BACKEND}" == "nvidia" ]] && \
    [[ "${TORCH_INDEX_OVERRIDDEN}" == false ]]; then
   run "${COMFYUI_PYTHON}" -m pip install \
     torch torchvision torchaudio \
     --extra-index-url "${TORCH_INDEX_URL}"
 else
-  run "${COMFYUI_PYTHON}" -m pip install \
-    torch torchvision torchaudio \
+  torch_args=(
+    -m pip install
+  )
+
+  if [[ "${TORCH_PRE}" == true ]]; then
+    torch_args+=(--pre)
+  fi
+
+  torch_args+=(
+    torch torchvision torchaudio
     --index-url "${TORCH_INDEX_URL}"
+  )
+
+  run "${COMFYUI_PYTHON}" "${torch_args[@]}"
 fi
+
 run "${COMFYUI_PYTHON}" -m pip install -r "${COMFYUI_DIR}/requirements.txt"
 
 run mkdir -p \
@@ -883,6 +948,18 @@ if [[ "${START_COMFYUI}" == true ]]; then
       fi
     fi
   fi
+
+  log "Starting Veyqra"
+
+  if [[ "${DRY_RUN}" == true ]]; then
+    info "Would start Veyqra (npm run dev)."
+  else
+    mkdir -p "${REPO_ROOT}/logs"
+    cd "${REPO_ROOT}"
+    npm run dev >"${REPO_ROOT}/logs/veyqra.log" 2>&1 &
+    veyqra_pid=$!
+    info "Veyqra started with PID ${veyqra_pid}."
+  fi
 fi
 
 if [[ "${MODEL_SELECTION}" == "none" ]]; then
@@ -893,19 +970,17 @@ else
   info "Selected model bundle installed in ${COMFYUI_DIR}/models."
 fi
 
-cat <<EOF
-
-Veyqra local runtime setup is complete.
-
-Start ComfyUI:
-  scripts/start-comfyui.sh
-
-Start the Veyqra API in another terminal:
-  npm run api
-
-Start the Veyqra web app in another terminal:
-  npm run web
-
-Verify an already running ComfyUI instance:
-  scripts/verify-comfyui.py --url ${COMFYUI_URL}
-EOF
+echo ""
+echo "Veyqra setup for Linux is complete."
+echo ""
+if [[ "${START_COMFYUI}" == true ]] && [[ "${DRY_RUN}" == false ]]; then
+  echo "ComfyUI and Veyqra have been started automatically."
+else
+  echo "To start Veyqra:"
+  echo "  scripts/start-veyqra.sh"
+  echo ""
+  echo "To start ComfyUI (optional, if not already running):"
+  echo "  scripts/start-comfyui.sh"
+fi
+echo ""
+echo "Open: http://localhost:3000"

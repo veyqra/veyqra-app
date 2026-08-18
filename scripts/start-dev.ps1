@@ -36,11 +36,13 @@ try {
         -NoNewWindow `
         -PassThru
 
+    $webDirectory = Join-Path $projectRoot "apps\web"
+
     Write-Host "Frontend startet auf http://localhost:3000 ..."
     $webProcess = Start-Process `
         -FilePath "npm.cmd" `
-        -ArgumentList "run", "dev", "--workspace=web" `
-        -WorkingDirectory $projectRoot `
+        -ArgumentList "run", "dev" `
+        -WorkingDirectory $webDirectory `
         -NoNewWindow `
         -PassThru
 

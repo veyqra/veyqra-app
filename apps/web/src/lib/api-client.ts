@@ -35,11 +35,12 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     let details: unknown;
+    const rawBody = await response.text();
 
     try {
-      details = await response.json();
+      details = JSON.parse(rawBody);
     } catch {
-      details = await response.text();
+      details = rawBody;
     }
 
     const detail =
