@@ -18,7 +18,7 @@
 
 Veyqra is an open-source interface for local AI image generation powered by ComfyUI.
 
-Use FLUX and SDXL, load LoRAs, queue generations, edit images, and browse your history — without having to build or manage ComfyUI node graphs.
+Use FLUX and SDXL, load LoRAs, queue generations, use Image-to-Image and Inpaint, and browse your history — without having to build or manage ComfyUI node graphs.
 
 > **v0.1.0-alpha**
 >
@@ -26,17 +26,68 @@ Use FLUX and SDXL, load LoRAs, queue generations, edit images, and browse your h
 
 ![Veyqra Generate workspace](docs/screenshots/generate-desktop.webp)
 
+## Quick start
+
+Veyqra includes automated installers for Linux and Windows. They can detect or set up ComfyUI, create isolated environments, install required custom nodes, configure the API, and optionally download supported model bundles.
+
+### Linux
+
+After cloning the repository, run:
+
+```bash
+scripts/install-linux.sh
+```
+
+To review the installation plan without changing the system:
+
+```bash
+scripts/install-linux.sh --dry-run --yes
+```
+
+### Windows
+
+From the repository root:
+
+```powershell
+scripts\install-windows.cmd
+```
+
+After installation:
+
+```powershell
+scripts\start-comfyui.cmd
+npm run dev:windows
+```
+
+Open <http://localhost:3000>.
+
+> Existing ComfyUI installations can be reused. Large model downloads are optional and remain an explicit user choice.
+
+For advanced installer options, Docker Compose, and manual setup, see [Installation](#installation).
+
+## Highlights
+
+- **FLUX and SDXL** support
+- **Text to Image, Image to Image, and Inpaint**
+- **Model and LoRA catalog** loaded directly from ComfyUI
+- **Multiple queued generation jobs** with progress, status, and error reporting
+- **Automatic inpaint segmentation** through a grounding-mask workflow
+- **Persistent generation history** with reusable images and metadata
+- **Local prompt translation** from German, French, Spanish, Italian, and Portuguese to English
+- **Live local runtime status** including GPU, VRAM, and ComfyUI queue information
+- **Responsive desktop and mobile UI**
+
+<p align="center">
+  <img src="docs/screenshots/generate-mobile.jpeg" width="420" alt="Veyqra mobile Generate interface with image preview and generation queue">
+</p>
+
 ## Motivation
 
-Veyqra started with a simple request: my girlfriend wanted to generate
-personalized images of herself. The available tools were powerful, but
-training a LoRA, configuring ComfyUI, and building the right workflows
-required too much specialist knowledge for an approachable creative process.
+Veyqra started with a simple request: my girlfriend wanted to generate personalized images using a LoRA. The available tools were powerful, but training a LoRA, configuring ComfyUI, and building the right workflows required too much specialist knowledge for an approachable creative process.
 
-The project aims to make those capabilities accessible through a focused
-interface without hiding the flexibility of the local AI tooling underneath.
+Veyqra keeps ComfyUI as the powerful backend while providing a focused interface for everyday image generation. The goal is to make local AI tooling easier to use without hiding the flexibility underneath.
 
-## Current features
+## Features in detail
 
 - Dashboard with job, model, and runtime status
 - FLUX and SDXL Text to Image, Image to Image, and Inpaint modes
@@ -59,69 +110,9 @@ interface without hiding the flexibility of the local AI tooling underneath.
   <img src="docs/screenshots/generate-mobile.jpeg" width="420" alt="Veyqra mobile Generate interface with image preview and generation queue">
 </p>
 
-## Not implemented yet
+## Installation
 
-- AWS account connection and instance management
-- Veyqra Cloud
-- LoRA training
-- User accounts and authentication
-- Settings backend
-- Marketplace and plugin system
-- Production-ready Docker deployment
-
-The AWS control in the top bar is intentionally shown as disconnected until a
-real backend connection is available.
-
-## Architecture
-
-```text
-Browser
-  │
-  ▼
-Next.js 16 / React 19 / Zustand
-  │  REST
-  ▼
-FastAPI / Pydantic
-  │  HTTP + WebSocket
-  ▼
-ComfyUI
-  ├─ Models and LoRAs
-  ├─ Workflow queue
-  ├─ Progress events
-  ├─ Generated images
-  └─ GPU, VRAM, and queue status
-```
-
-The frontend does not need to know the internal ComfyUI workflow structure.
-The API validates each request, loads a workflow template, applies the selected
-model, LoRA, prompt, and parameters, and submits the result to ComfyUI.
-
-## Repository structure
-
-```text
-veyqra/
-├── apps/
-│   ├── api/
-│   │   ├── app/
-│   │   │   ├── api/routes/       # REST endpoints
-│   │   │   ├── core/             # Configuration
-│   │   │   ├── schemas/          # Pydantic schemas
-│   │   │   └── services/         # ComfyUI, jobs, history, models
-│   │   ├── scripts/              # Translation model setup
-│   │   └── workflows/            # ComfyUI API workflows
-│   └── web/
-│       └── src/
-│           ├── app/              # Next.js routes
-│           ├── components/       # UI and workspaces
-│           ├── services/         # API clients
-│           ├── stores/           # Zustand stores
-│           └── types/            # Frontend types
-├── docs/                          # Vision and architecture drafts
-├── docker-compose.yml             # Web and API containers
-└── package.json                   # Workspace scripts
-```
-
-## Requirements
+### Requirements
 
 - Node.js 22 or newer
 - npm
@@ -154,53 +145,6 @@ the ComfyUI model catalog.
 The automated installers offer official FLUX model bundles and the official
 SDXL Base 1.0 checkpoint. Other SDXL checkpoints and LoRAs can be installed in
 ComfyUI separately; Veyqra then discovers them through the model catalog.
-
-## Quick start with Docker Compose
-
-Docker Compose runs the Veyqra web interface and API. ComfyUI, custom nodes,
-models, and GPU drivers remain installed on the host and are not copied into
-the containers.
-
-ComfyUI must accept connections from Docker. When using the Veyqra-managed
-ComfyUI installation on Linux, start it with:
-
-```bash
-VEYQRA_COMFYUI_HOST=0.0.0.0 scripts/start-comfyui.sh
-```
-
-Then build and start Veyqra:
-
-```bash
-docker compose up --build -d
-```
-
-Open <http://localhost:3000>. View the logs or stop the services with:
-
-```bash
-docker compose logs -f
-docker compose down
-```
-
-Generated images, uploads, job metadata, history, and installed translation
-models remain in `apps/api/data`. The API is exposed only on
-`http://127.0.0.1:8000`; browser requests use the frontend's same-origin proxy.
-
-Compose connects to ComfyUI at `http://host.docker.internal:8188` by default.
-Override the address, ports, or container user in a root `.env` file when
-needed:
-
-```dotenv
-VEYQRA_COMFYUI_URL=http://host.docker.internal:8188
-VEYQRA_WEB_PORT=3000
-VEYQRA_API_PORT=8000
-VEYQRA_UID=1000
-VEYQRA_GID=1000
-```
-
-On Linux, use your numeric `id -u` and `id -g` values if they are not `1000`.
-Do not expose ComfyUI's port to untrusted networks.
-
-## Installation
 
 ### Automated Linux installer
 
@@ -404,6 +348,51 @@ cd apps/api
 .venv/bin/python scripts/install_translation_models.py de fr
 ```
 
+### Docker Compose
+
+Docker Compose runs the Veyqra web interface and API. ComfyUI, custom nodes,
+models, and GPU drivers remain installed on the host and are not copied into
+the containers.
+
+ComfyUI must accept connections from Docker. When using the Veyqra-managed
+ComfyUI installation on Linux, start it with:
+
+```bash
+VEYQRA_COMFYUI_HOST=0.0.0.0 scripts/start-comfyui.sh
+```
+
+Then build and start Veyqra:
+
+```bash
+docker compose up --build -d
+```
+
+Open <http://localhost:3000>. View the logs or stop the services with:
+
+```bash
+docker compose logs -f
+docker compose down
+```
+
+Generated images, uploads, job metadata, history, and installed translation
+models remain in `apps/api/data`. The API is exposed only on
+`http://127.0.0.1:8000`; browser requests use the frontend's same-origin proxy.
+
+Compose connects to ComfyUI at `http://host.docker.internal:8188` by default.
+Override the address, ports, or container user in a root `.env` file when
+needed:
+
+```dotenv
+VEYQRA_COMFYUI_URL=http://host.docker.internal:8188
+VEYQRA_WEB_PORT=3000
+VEYQRA_API_PORT=8000
+VEYQRA_UID=1000
+VEYQRA_GID=1000
+```
+
+On Linux, use your numeric `id -u` and `id -g` values if they are not `1000`.
+Do not expose ComfyUI's port to untrusted networks.
+
 ## Running the development environment
 
 Start ComfyUI first. Then start the API and web app together:
@@ -587,6 +576,55 @@ Replace this marker with:
 Show the GPU name, VRAM usage, and ComfyUI running/pending counters.
 -->
 
+## Architecture
+
+```text
+Browser
+  │
+  ▼
+Next.js 16 / React 19 / Zustand
+  │  REST
+  ▼
+FastAPI / Pydantic
+  │  HTTP + WebSocket
+  ▼
+ComfyUI
+  ├─ Models and LoRAs
+  ├─ Workflow queue
+  ├─ Progress events
+  ├─ Generated images
+  └─ GPU, VRAM, and queue status
+```
+
+The frontend does not need to know the internal ComfyUI workflow structure.
+The API validates each request, loads a workflow template, applies the selected
+model, LoRA, prompt, and parameters, and submits the result to ComfyUI.
+
+## Repository structure
+
+```text
+veyqra/
+├── apps/
+│   ├── api/
+│   │   ├── app/
+│   │   │   ├── api/routes/       # REST endpoints
+│   │   │   ├── core/             # Configuration
+│   │   │   ├── schemas/          # Pydantic schemas
+│   │   │   └── services/         # ComfyUI, jobs, history, models
+│   │   ├── scripts/              # Translation model setup
+│   │   └── workflows/            # ComfyUI API workflows
+│   └── web/
+│       └── src/
+│           ├── app/              # Next.js routes
+│           ├── components/       # UI and workspaces
+│           ├── services/         # API clients
+│           ├── stores/           # Zustand stores
+│           └── types/            # Frontend types
+├── docs/                          # Vision and architecture drafts
+├── docker-compose.yml             # Web and API containers
+└── package.json                   # Workspace scripts
+```
+
 ## Main API endpoints
 
 All application endpoints use `/api/v1` as their default prefix.
@@ -648,9 +686,12 @@ Planned major work packages:
 1. Real AWS account integration and cloud instance status
 2. Robust queue and cancellation management directly through ComfyUI
 3. Training and LoRA workflows
-4. Settings and user accounts
-5. Marketplace and plugin interfaces
-6. Production-ready packaging and deployment
+4. Settings, user accounts, and authentication
+5. Veyqra Cloud
+6. Marketplace and plugin interfaces
+7. Production-ready packaging and deployment
+
+The AWS control in the top bar is intentionally shown as disconnected until a real backend connection is available.
 
 ## Contributing
 
