@@ -4,7 +4,7 @@
 
 <h1 align="center">Veyqra</h1>
 
-<p align="center"><strong>Create. Train. Deploy.</strong></p>
+<p align="center"><strong>Local AI generation, without the workflow complexity</strong></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/status-early_alpha-8b5cf6" alt="Early Alpha">
@@ -18,7 +18,7 @@ Veyqra is a local, web-based interface for AI image generation with ComfyUI.
 It connects a responsive Next.js frontend to a FastAPI backend that translates
 UI settings into versioned ComfyUI workflows.
 
-The project is currently at **0.1.0 Alpha**. Local image generation is
+v0.1.0-alpha. Local image generation is
 functional, while cloud integration, training, authentication, and the
 marketplace are still planned.
 
