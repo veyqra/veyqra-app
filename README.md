@@ -77,10 +77,6 @@ For advanced installer options, Docker Compose, and manual setup, see [Installat
 - **Live local runtime status** including GPU, VRAM, and ComfyUI queue information
 - **Responsive desktop and mobile UI**
 
-<p align="center">
-  <img src="docs/screenshots/generate-mobile.jpeg" width="420" alt="Veyqra mobile Generate interface with image preview and generation queue">
-</p>
-
 ## Motivation
 
 Veyqra started with a simple request: my girlfriend wanted to generate personalized images using a LoRA. The available tools were powerful, but training a LoRA, configuring ComfyUI, and building the right workflows required too much specialist knowledge for an approachable creative process.
