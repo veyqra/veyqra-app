@@ -4,7 +4,7 @@
 
 <h1 align="center">Veyqra</h1>
 
-<p align="center"><strong>Local AI generation, without the workflow complexity</strong></p>
+### Generate locally. Keep control. Skip the ComfyUI complexity.
 
 <p align="center">
   <img src="https://img.shields.io/badge/status-early_alpha-8b5cf6" alt="Early Alpha">
@@ -14,13 +14,12 @@
   <a href="https://github.com/Comfy-Org/ComfyUI"><img src="https://img.shields.io/badge/backend-ComfyUI-111827" alt="ComfyUI"></a>
 </p>
 
-Veyqra is a local, web-based interface for AI image generation with ComfyUI.
-It connects a responsive Next.js frontend to a FastAPI backend that translates
-UI settings into versioned ComfyUI workflows.
+Veyqra is an open-source interface for local AI image generation powered by ComfyUI.
 
-v0.1.0-alpha. Local image generation is
-functional, while cloud integration, training, authentication, and the
-marketplace are still planned.
+Use FLUX and SDXL, load LoRAs, queue generations, edit images and browse your history — without having to build or manage ComfyUI node graphs.
+
+> **v0.1.0-alpha**
+> Local generation is working today. Training, cloud integration, authentication and the marketplace are planned.
 
 ![Veyqra Generate workspace](docs/screenshots/generate-desktop.webp)
 
