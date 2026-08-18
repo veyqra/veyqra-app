@@ -23,6 +23,6 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run lint --workspace=web
+      - run: npm --prefix apps/web run lint
 
-      - run: npm run build --workspace=web
+      - run: npm --prefix apps/web run build
