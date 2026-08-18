@@ -110,37 +110,95 @@ Veyqra keeps ComfyUI as the powerful backend while providing a focused interface
 
 ### Requirements
 
+- Git
 - Node.js 22 or newer
 - npm
 - Python 3.12 recommended
-- A running ComfyUI instance, available by default at
-  `http://127.0.0.1:8188`
-- A GPU configuration supported by ComfyUI
+- A supported GPU configuration
+- ComfyUI — either an existing installation or a Veyqra-managed installation
 - FLUX models and the CLIP/VAE files required by the FLUX workflows
 - An SDXL checkpoint in ComfyUI's `models/checkpoints` directory for SDXL
   generation
 
-Inpaint additionally requires the custom nodes referenced by
-`inpaint_flux.json`:
+Inpaint additionally requires the custom nodes and models referenced below.
 
-- `GroundingMaskModelLoader`
-- `GroundingMaskDetector`
+### Required ComfyUI components
 
-The current workflow uses `Florence-2: Base (Segmentation)` for automatic mask
-detection. ComfyUI must be able to load these nodes and the associated model.
+Veyqra uses a small set of ComfyUI custom nodes in addition to the standard
+ComfyUI installation. The automated Veyqra installers install these
+dependencies automatically.
 
-The workflow templates also expect these files by default:
+If you use an existing ComfyUI installation or configure Veyqra manually, make
+sure the following components are available.
 
-- `clip_l.safetensors`
-- `t5xxl_fp16.safetensors`
-- `ae.safetensors`
+#### Required custom nodes
 
-The selected diffusion model and optional LoRA are injected at runtime from
-the ComfyUI model catalog.
+**ComfyUI-Grounding**
 
-The automated installers offer official FLUX model bundles and the official
-SDXL Base 1.0 checkpoint. Other SDXL checkpoints and LoRAs can be installed in
-ComfyUI separately; Veyqra then discovers them through the model catalog.
+- Repository: https://github.com/PozzettiAndrea/ComfyUI-Grounding
+- Provides: `GroundingMaskModelLoader`, `GroundingMaskDetector`
+- Purpose: Automatic mask detection in Inpaint workflows
+- The current Inpaint workflow uses `Florence-2: Base (Segmentation)` for mask
+  detection
+
+The exact custom-node repositories installed by Veyqra are defined in:
+
+```text
+config/comfyui-nodes.json
+```
+
+#### Optional custom nodes
+
+**ComfyUI-Manager**
+
+- Repository: https://github.com/Comfy-Org/ComfyUI-Manager
+- Purpose: Optional ComfyUI node browser and installer
+- Installation: Use `--with-manager` on Linux or `-WithManager` on Windows
+
+#### Required model files for FLUX
+
+The current FLUX workflows expect the following model files:
+
+```text
+ComfyUI/models/clip/clip_l.safetensors
+ComfyUI/models/clip/t5xxl_fp16.safetensors
+ComfyUI/models/vae/ae.safetensors
+```
+
+FLUX diffusion models can be stored in either:
+
+```text
+ComfyUI/models/diffusion_models/
+```
+
+or:
+
+```text
+ComfyUI/models/unet/
+```
+
+LoRAs belong in:
+
+```text
+ComfyUI/models/loras/
+```
+
+#### Required model files for SDXL
+
+At least one compatible SDXL checkpoint is required in:
+
+```text
+ComfyUI/models/checkpoints/
+```
+
+For example:
+
+```text
+sd_xl_base_1.0.safetensors
+```
+
+The Veyqra installers can optionally download the supported official model
+bundles and place them in the correct directories automatically.
 
 ### Automated Linux installer
 

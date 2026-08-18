@@ -24,6 +24,7 @@ export const navigation = [
     title: "Train",
     href: "/train",
     icon: BrainCircuit,
+    disabled: true,
   },
   {
     title: "Models",

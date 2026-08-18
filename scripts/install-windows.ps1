@@ -234,6 +234,67 @@ function Resolve-GpuBackend {
     return "cpu"
 }
 
+function Resolve-AmdTorchIndex {
+    $gpuNames = @()
+    try {
+        $gpuNames = @(Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match "AMD|Radeon" } | ForEach-Object { $_.Name })
+    }
+    catch {
+        return $null
+    }
+
+    if ($gpuNames.Count -eq 0) {
+        return $null
+    }
+
+    $name = $gpuNames[0]
+    Write-Info "Detected AMD GPU: $name"
+
+    $result = switch -Regex ($name) {
+        # RDNA2 / gfx103x
+        "RX 6950 XT|RX 6900 XT|RX 6800 XT|RX 6800|RX 6750 XT|RX 6700 XT|RX 6700|RX 6650 XT|RX 6600 XT|RX 6600" {
+            [pscustomobject]@{
+                Index = "https://repo.amd.com/rocm/whl/gfx103X-all/"
+                Architecture = "gfx103X"
+                Support = "experimental"
+            }
+            break
+        }
+        # RDNA3 / gfx110x
+        "RX 7900 XTX|RX 7900 XT|RX 7900 GRE|RX 7800 XT|RX 7700 XT|RX 7700" {
+            [pscustomobject]@{
+                Index = "https://repo.amd.com/rocm/whl/gfx110X-all/"
+                Architecture = "gfx110X"
+                Support = "experimental"
+            }
+            break
+        }
+        # RDNA4 / gfx120x
+        "RX 9070 XT|RX 9070|RX 9060 XT" {
+            [pscustomobject]@{
+                Index = "https://repo.amd.com/rocm/whl/gfx120X-all/"
+                Architecture = "gfx120X"
+                Support = "experimental"
+            }
+            break
+        }
+        # Ryzen AI / gfx115x
+        "Ryzen AI.*Max" {
+            [pscustomobject]@{
+                Index = "https://repo.amd.com/rocm/whl/gfx1151/"
+                Architecture = "gfx1151"
+                Support = "supported"
+            }
+            break
+        }
+        default {
+            $null
+        }
+    }
+
+    return $result
+}
+
 function Get-ComfyPython {
     param([string]$Directory)
 
@@ -261,10 +322,12 @@ function Test-PythonModule {
         [string]$PythonPath,
         [string]$Module
     )
+
     if ($DryRun -or -not (Test-Path $PythonPath -PathType Leaf)) {
         return $false
     }
-    & $PythonPath -c "import $Module" 2>$null
+
+    & $PythonPath -c "import importlib.util, sys; raise SystemExit(0 if importlib.util.find_spec(sys.argv[1]) else 1)" $Module
     return $LASTEXITCODE -eq 0
 }
 
@@ -441,6 +504,10 @@ $InstallDir = Resolve-InstallDirectory
 $resolvedComfyDir = Resolve-ComfyUIDirectory
 $resolvedModels = @(Select-Models)
 $resolvedGpu = Resolve-GpuBackend
+$amdGpuInfo = $null
+if ($resolvedGpu -eq "amd" -and -not $TorchIndexUrl) {
+    $amdGpuInfo = Resolve-AmdTorchIndex
+}
 $comfyUrl = "http://${ListenAddress}:$Port"
 
 Write-Step "Installation plan"
@@ -449,6 +516,12 @@ Write-Info "Install root:  $InstallDir"
 Write-Info "ComfyUI:       $resolvedComfyDir"
 Write-Info "Python:        $script:PythonCommand $($script:PythonPrefix -join ' ')"
 Write-Info "GPU backend:   $resolvedGpu"
+if ($amdGpuInfo) {
+    Write-Info "GPU architecture: $($amdGpuInfo.Architecture)"
+    if ($amdGpuInfo.Support -eq "experimental") {
+        Write-WarningMessage "Windows ROCm support for this GPU is experimental."
+    }
+}
 Write-Info "ComfyUI URL:   $comfyUrl"
 Write-Info "Models:         $(if ($resolvedModels.Count -gt 0) { $resolvedModels -join ',' } else { 'none' })"
 if ($TorchIndexUrl) {
@@ -472,7 +545,10 @@ if (-not $DryRun) {
 Clone-Or-UpdateRepository -Name "ComfyUI" -Repository $comfyRepo -Destination $resolvedComfyDir
 
 $comfyPython = Get-ComfyPython $resolvedComfyDir
-Invoke-External $comfyPython @("-m", "pip", "install", "--upgrade", "pip", "wheel", "setuptools")
+# Some GPU-specific PyTorch builds constrain setuptools (for example, the
+# Windows ROCm previews require setuptools<82). Leave that dependency under
+# PyTorch's control instead of unconditionally upgrading it here.
+Invoke-External $comfyPython @("-m", "pip", "install", "--upgrade", "pip", "wheel")
 
 $torchAvailable = Test-PythonModule -PythonPath $comfyPython -Module "torch"
 if ($TorchIndexUrl -or -not $torchAvailable) {
@@ -482,14 +558,27 @@ if ($TorchIndexUrl -or -not $torchAvailable) {
             "nvidia" { $selectedTorchIndex = "https://download.pytorch.org/whl/cu130" }
             "cpu" { $selectedTorchIndex = "https://download.pytorch.org/whl/cpu" }
             "amd" {
-                throw "A new Windows AMD setup needs a GPU-specific PyTorch build. Use an existing working ComfyUI installation, the official AMD portable package, or pass -TorchIndexUrl explicitly."
+                $amdResult = Resolve-AmdTorchIndex
+                if ($null -eq $amdResult) {
+                    throw "AMD GPU detected, but Veyqra does not know the correct ROCm PyTorch package for this model. Use -TorchIndexUrl to specify the appropriate AMD ROCm wheel index manually."
+                }
+                $selectedTorchIndex = $amdResult.Index
+                Write-Info "AMD Architecture: $($amdResult.Architecture)"
+                if ($amdResult.Support -eq "experimental") {
+                    Write-WarningMessage "Windows ROCm support for this GPU is experimental."
+                }
             }
         }
     }
-    Invoke-External $comfyPython @(
-        "-m", "pip", "install", "torch", "torchvision", "torchaudio",
-        "--index-url", $selectedTorchIndex
+    $torchArguments = @("-m", "pip", "install")
+    if ($resolvedGpu -eq "amd") {
+        # The official Windows ROCm indexes currently publish preview builds.
+        $torchArguments += "--pre"
+    }
+    $torchArguments += @(
+        "torch", "torchvision", "torchaudio", "--index-url", $selectedTorchIndex
     )
+    Invoke-External $comfyPython $torchArguments
 }
 else {
     Write-Info "Existing PyTorch installation detected; keeping it unchanged."
@@ -528,15 +617,36 @@ if ($resolvedModels.Count -gt 0) {
 }
 
 Write-Step "Installing Veyqra dependencies"
-Invoke-External "npm.cmd" @("ci", "--prefix", $projectRoot)
+Invoke-External "npm.cmd" @(
+    "install",
+    "--prefix", $projectRoot
+)
 
 $apiDirectory = Join-Path $projectRoot "apps\api"
-$apiPython = Join-Path $apiDirectory ".venv\Scripts\python.exe"
-if (-not (Test-Path $apiPython -PathType Leaf)) {
-    Invoke-SelectedPython -Arguments @("-m", "venv", (Join-Path $apiDirectory ".venv"))
+$apiVenvDirectory = Join-Path $apiDirectory ".venv"
+$apiPython = Join-Path $apiVenvDirectory "Scripts\python.exe"
+
+for ($attempt = 1; $attempt -le 2; $attempt++) {
+    if (-not (Test-Path $apiPython -PathType Leaf)) {
+        if (Test-Path $apiVenvDirectory) {
+            Remove-Item -Recurse -Force $apiVenvDirectory -ErrorAction SilentlyContinue
+        }
+        Invoke-SelectedPython -Arguments @("-m", "venv", $apiVenvDirectory)
+    }
+
+    try {
+        Invoke-External $apiPython @("-m", "pip", "install", "--upgrade", "pip", "wheel", "setuptools")
+        Invoke-External $apiPython @("-m", "pip", "install", "-r", (Join-Path $apiDirectory "requirements.txt"))
+        break
+    }
+    catch {
+        if ($attempt -eq 2) {
+            throw
+        }
+        Write-WarningMessage "The API virtual environment appears to be partially corrupted or incomplete. Recreating it and retrying the install."
+        Remove-Item -Recurse -Force $apiVenvDirectory -ErrorAction SilentlyContinue
+    }
 }
-Invoke-External $apiPython @("-m", "pip", "install", "--upgrade", "pip", "wheel", "setuptools")
-Invoke-External $apiPython @("-m", "pip", "install", "-r", (Join-Path $apiDirectory "requirements.txt"))
 
 if ($WithTranslations) {
     Invoke-External $apiPython @((Join-Path $apiDirectory "scripts\install_translation_models.py"))
@@ -568,13 +678,22 @@ if (-not $NoStart -and -not $DryRun) {
         "--url", $comfyUrl
     )
     $probeArguments = $script:PythonPrefix + $verifyArguments
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+
     & $script:PythonCommand @probeArguments 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    $probeExitCode = $LASTEXITCODE
+
+    $ErrorActionPreference = $previousErrorActionPreference
+
+    if ($probeExitCode -eq 0) {
         Write-Info "An existing compatible ComfyUI instance is already running."
     }
     else {
         $logsDirectory = Join-Path $projectRoot "logs"
         New-Item -ItemType Directory -Force -Path $logsDirectory | Out-Null
+
         $process = Start-Process `
             -FilePath $comfyPython `
             -ArgumentList @("main.py", "--listen", $ListenAddress, "--port", $Port) `
@@ -582,18 +701,34 @@ if (-not $NoStart -and -not $DryRun) {
             -RedirectStandardOutput (Join-Path $logsDirectory "comfyui-windows.log") `
             -RedirectStandardError (Join-Path $logsDirectory "comfyui-windows-error.log") `
             -PassThru
+
         Write-Info "ComfyUI started with PID $($process.Id)."
+
         Invoke-SelectedPython -Arguments ($verifyArguments + @("--wait", "180"))
     }
+
+    Write-Step "Starting Veyqra"
+    $veyqraProcess = Start-Process `
+        -FilePath "npm.cmd" `
+        -ArgumentList @("run", "dev:windows") `
+        -WorkingDirectory $projectRoot `
+        -PassThru
+
+    Write-Info "Veyqra started with PID $($veyqraProcess.Id)."
 }
 
 Write-Host ""
 Write-Host "Veyqra setup for Windows is complete." -ForegroundColor Green
 Write-Host ""
-Write-Host "Start ComfyUI:"
-Write-Host "  scripts\start-comfyui.cmd"
-Write-Host ""
-Write-Host "Start Veyqra with reload:"
-Write-Host "  npm run dev:windows"
+if ($NoStart) {
+    Write-Host "To start Veyqra:"
+    Write-Host "  scripts\start-veyqra.cmd"
+    Write-Host ""
+    Write-Host "To start ComfyUI (optional, if not already running):"
+    Write-Host "  scripts\start-comfyui.cmd"
+}
+else {
+    Write-Host "ComfyUI and Veyqra have been started automatically."
+}
 Write-Host ""
 Write-Host "Open: http://localhost:3000"
