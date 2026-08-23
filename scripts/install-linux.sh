@@ -969,10 +969,11 @@ if [[ "${START_COMFYUI}" == true ]]; then
         >"${REPO_ROOT}/logs/comfyui.log" 2>&1 &
       comfyui_pid=$!
       info "ComfyUI started with PID ${comfyui_pid}."
+      info "Waiting up to 10 minutes for ComfyUI's first-start initialization."
 
       if ! "${PYTHON_BIN}" "${SCRIPT_DIR}/verify-comfyui.py" \
         --url "${COMFYUI_URL}" \
-        --wait 180; then
+        --wait 600; then
         warn "ComfyUI verification failed. Recent log output:"
         tail -n 40 "${REPO_ROOT}/logs/comfyui.log" || true
         exit 1
