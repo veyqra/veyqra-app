@@ -983,11 +983,11 @@ if [[ "${START_COMFYUI}" == true ]]; then
   log "Starting Veyqra"
 
   if [[ "${DRY_RUN}" == true ]]; then
-    info "Would start Veyqra (npm run dev)."
+    info "Would start scripts/start-veyqra.sh."
   else
     mkdir -p "${REPO_ROOT}/logs"
-    cd "${REPO_ROOT}"
-    npm run dev >"${REPO_ROOT}/logs/veyqra.log" 2>&1 &
+    "${SCRIPT_DIR}/start-veyqra.sh" \
+      >"${REPO_ROOT}/logs/veyqra.log" 2>&1 &
     veyqra_pid=$!
     info "Veyqra started with PID ${veyqra_pid}."
   fi

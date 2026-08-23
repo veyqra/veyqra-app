@@ -4,7 +4,7 @@
   "private": true,
   "description": "Veyqra - AI Generation & Training Platform",
   "scripts": {
-    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
+    "dev": "bash scripts/start-dev.sh",
     "dev:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
     "install:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-windows.ps1",
     "web": "npm --prefix apps/web run dev",
