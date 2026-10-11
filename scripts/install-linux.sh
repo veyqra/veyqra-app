@@ -227,8 +227,10 @@ choose_comfyui_directory() {
   local saved_directory
   local answer
   local custom_directory
+  local detected_directory
   local index
   local -a detected=()
+  local -a external_detected=()
 
   managed_directory="$(normalize_path "${INSTALL_ROOT}/ComfyUI")"
 
@@ -244,6 +246,16 @@ choose_comfyui_directory() {
 
   mapfile -t detected < <(discover_comfyui_directories)
   saved_directory="$(read_saved_comfyui_directory)"
+
+  # The managed destination has its own menu entry below. Do not also list a
+  # partially or fully installed managed copy as an external installation,
+  # which would shift the numbering between resumed runs.
+  for detected_directory in "${detected[@]}"; do
+    if [[ "$(normalize_path "${detected_directory%/}")" != "${managed_directory}" ]]; then
+      external_detected+=("${detected_directory}")
+    fi
+  done
+  detected=("${external_detected[@]}")
 
   # Reuse a previously selected installation during unattended runs. Otherwise,
   # unattended setup always stays inside the Veyqra-managed data directory.
@@ -495,9 +507,8 @@ detect_gpu_backend() {
 }
 
 detect_hsa_override() {
-  # Do not set HSA_OVERRIDE_GFX_VERSION automatically.
-  # Architecture-specific ROCm/TheRock wheels should target the detected
-  # gfx architecture directly. Users can still force an override explicitly.
+  # Architecture-dependent compatibility overrides are selected after the
+  # actual gfx target is detected. Preserve an explicit user override.
   if [[ "${GPU_BACKEND}" == "amd" ]] && [[ -n "${HSA_OVERRIDE}" ]]; then
     info "Using user-supplied HSA_OVERRIDE_GFX_VERSION=${HSA_OVERRIDE}."
   fi
@@ -509,7 +520,9 @@ detect_amd_gfx_arch() {
   if command -v rocminfo >/dev/null 2>&1; then
     gfx="$(
       rocminfo 2>/dev/null |
-        grep -oE 'gfx[0-9]+' |
+        # Ignore generic ISA families such as gfx10-generic. A physical AMD
+        # agent is reported with a full architecture ID (for example gfx1031).
+        grep -oE 'gfx[0-9]{4}[[:alnum:]]*' |
         sort -u |
         head -n 1
     )"
@@ -539,10 +552,19 @@ set_default_torch_index() {
 
       case "${AMD_GFX_ARCH}" in
         gfx1030|gfx1031|gfx1032)
-          TORCH_INDEX_URL="https://rocm.nightlies.amd.com/v2/gfx103X-all/"
-          TORCH_PRE=true
-          AMD_SUPPORT_LEVEL="community/nightly"
-          warn "AMD ${AMD_GFX_ARCH} detected; using community/nightly ROCm wheels."
+          # AMD's gfx103X nightly index can temporarily publish without the
+          # PyTorch packages. The stable ROCm 6.4 index includes gfx1030 and
+          # matched CPython 3.12 torch/vision/audio wheels.
+          TORCH_INDEX_URL="https://download.pytorch.org/whl/rocm6.4"
+          TORCH_PRE=false
+          AMD_SUPPORT_LEVEL="compatibility"
+
+          if [[ "${AMD_GFX_ARCH}" != "gfx1030" ]] && [[ -z "${HSA_OVERRIDE}" ]]; then
+            HSA_OVERRIDE="10.3.0"
+            warn "AMD ${AMD_GFX_ARCH} detected; startup will use HSA_OVERRIDE_GFX_VERSION=10.3.0."
+          fi
+
+          warn "AMD ${AMD_GFX_ARCH} detected; using stable ROCm 6.4 compatibility wheels."
           ;;
         gfx1100|gfx1101|gfx1200|gfx1201)
           TORCH_INDEX_URL="https://download.pytorch.org/whl/rocm7.2"
@@ -612,7 +634,16 @@ install_custom_nodes() {
     [[ -n "${name}" ]] || continue
 
     local destination="${nodes_dir}/${name}"
-    clone_or_update_repo "${name}" "${repo}" "${destination}" "${ref}"
+    if [[ -d "${destination}" ]] && \
+       [[ ! -d "${destination}/.git" ]] && \
+       [[ -f "${destination}/__init__.py" ]]; then
+      info "Using existing ${name} installation at ${destination}."
+      if [[ "${UPDATE_REPOS}" == true ]]; then
+        warn "Cannot update ${destination} because it has no Git metadata."
+      fi
+    else
+      clone_or_update_repo "${name}" "${repo}" "${destination}" "${ref}"
+    fi
 
     if [[ "${DRY_RUN}" == true ]] || [[ -f "${destination}/requirements.txt" ]]; then
       run "${comfy_python}" -m pip install -r "${destination}/requirements.txt"
@@ -938,10 +969,11 @@ if [[ "${START_COMFYUI}" == true ]]; then
         >"${REPO_ROOT}/logs/comfyui.log" 2>&1 &
       comfyui_pid=$!
       info "ComfyUI started with PID ${comfyui_pid}."
+      info "Waiting up to 10 minutes for ComfyUI's first-start initialization."
 
       if ! "${PYTHON_BIN}" "${SCRIPT_DIR}/verify-comfyui.py" \
         --url "${COMFYUI_URL}" \
-        --wait 180; then
+        --wait 600; then
         warn "ComfyUI verification failed. Recent log output:"
         tail -n 40 "${REPO_ROOT}/logs/comfyui.log" || true
         exit 1
@@ -952,11 +984,11 @@ if [[ "${START_COMFYUI}" == true ]]; then
   log "Starting Veyqra"
 
   if [[ "${DRY_RUN}" == true ]]; then
-    info "Would start Veyqra (npm run dev)."
+    info "Would start scripts/start-veyqra.sh."
   else
     mkdir -p "${REPO_ROOT}/logs"
-    cd "${REPO_ROOT}"
-    npm run dev >"${REPO_ROOT}/logs/veyqra.log" 2>&1 &
+    "${SCRIPT_DIR}/start-veyqra.sh" \
+      >"${REPO_ROOT}/logs/veyqra.log" 2>&1 &
     veyqra_pid=$!
     info "Veyqra started with PID ${veyqra_pid}."
   fi

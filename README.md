@@ -90,6 +90,24 @@ Veyqra is community-driven and in early alpha. Try an installation, report bugs 
 
 **Potential next milestones:** smoother setup, stronger queue/cancellation reliability, LoRA training, and packaging. See the [Roadmap](#roadmap) for planned work. No paid tiers are planned for the initial open-source release.
 
+## Features in detail
+
+- Dashboard with job, model, and runtime status
+- FLUX and SDXL Text to Image, Image to Image, and Inpaint modes
+- Model and LoRA catalog loaded directly from ComfyUI
+- Multiple generation jobs in the ComfyUI queue
+- Progress, status, error reporting, and persistent job metadata
+- Automatic inpaint segmentation through a grounding-mask workflow
+- Optional mask prompt with automatic extraction from the positive prompt
+- Local prompt translation from German, French, Spanish, Italian, and Portuguese to English
+- Voice input through the browser Speech Recognition API
+- Persistent history with reusable images and metadata
+- Direct reuse of history and preview images for Image to Image or Inpaint
+- Previous/next image navigation in Preview and History
+- Live ComfyUI GPU, VRAM, running-job, and pending-job information
+- Local notifications for completed, failed, and cancelled jobs
+- Responsive desktop and mobile navigation
+
 ## Installation
 
 ### Requirements
