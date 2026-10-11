@@ -103,18 +103,18 @@ export function DashboardWorkspace() {
   }, []);
   
   useEffect(() => {
-    if (!data || data.stats.activeJobs === 0) {
+    if (!data) {
       return;
     }
 
     const interval = window.setInterval(() => {
       void loadDashboard();
-    }, 5000);
+    }, 3000);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [data?.stats.activeJobs, loadDashboard]);
+  }, [data, loadDashboard]);
 
   if (isLoading && !data) {
     return (

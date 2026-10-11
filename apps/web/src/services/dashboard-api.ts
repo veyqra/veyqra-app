@@ -102,7 +102,10 @@ function toGenerationJob(
 export async function getDashboard(): Promise<DashboardData> {
   const response =
     await apiRequest<ApiDashboardResponse>(
-      "/dashboard"
+      "/dashboard",
+      {
+        signal: AbortSignal.timeout(10_000),
+      }
     );
 
   return {

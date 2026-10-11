@@ -1,3 +1,5 @@
+import asyncio
+
 from app.schemas.dashboard import (
     DashboardResponse,
     DashboardStatsResponse,
@@ -5,6 +7,7 @@ from app.schemas.dashboard import (
     GpuStatusResponse,
 )
 from app.schemas.generation import GenerationStatus
+from app.schemas.model import ModelCatalogResponse
 from app.core.config import get_settings
 from app.services.comfyui_client import (
     ComfyUIClient,
@@ -57,10 +60,44 @@ async def get_local_system_status(
 
 
 class DashboardService:
+    def __init__(self) -> None:
+        self._catalog = ModelCatalogResponse(
+            diffusion_models=[],
+            loras=[],
+        )
+        self._local_system = DashboardSystemResponse()
+        self._refresh_task: asyncio.Task[None] | None = None
+
+    def _refresh_comfy_data(self) -> None:
+        if (
+            self._refresh_task is None
+            or self._refresh_task.done()
+        ):
+            self._refresh_task = asyncio.create_task(
+                self._update_comfy_data()
+            )
+
+    async def _update_comfy_data(self) -> None:
+        catalog_result, local_system_result = await asyncio.gather(
+            model_service.get_catalog(),
+            get_local_system_status(comfy_client),
+            return_exceptions=True,
+        )
+
+        if isinstance(catalog_result, ModelCatalogResponse):
+            self._catalog = catalog_result
+
+        if isinstance(
+            local_system_result,
+            DashboardSystemResponse,
+        ):
+            self._local_system = local_system_result
+
     async def get_dashboard(
         self,
     ) -> DashboardResponse:
         jobs = await generation_service.list_jobs()
+        self._refresh_comfy_data()
 
         active_jobs = sum(
             1
@@ -86,22 +123,13 @@ class DashboardService:
             == GenerationStatus.FAILED
         )
 
-        catalog = await model_service.get_catalog()
-
         diffusion_models = len(
-            catalog.diffusion_models
+            self._catalog.diffusion_models
         )
-
-        loras = len(
-            catalog.loras
-        )
-
-        local_system = await get_local_system_status(
-            comfy_client
-        )
+        loras = len(self._catalog.loras)
 
         return DashboardResponse(
-            system=local_system,
+            system=self._local_system,
             stats=DashboardStatsResponse(
                 diffusion_models=diffusion_models,
                 loras=loras,

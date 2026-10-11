@@ -4,107 +4,91 @@
 
 <h1 align="center">Veyqra</h1>
 
-<p align="center">
-  <strong>Generate locally. Keep control. Skip the ComfyUI complexity.</strong>
-</p>
+<p align="center"><strong>Local AI image generation, without the ComfyUI node graphs.</strong></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-early_alpha-8b5cf6" alt="Early Alpha">
-  <img src="https://img.shields.io/badge/platform-Windows-2563eb?logo=windows11" alt="Windows">
-  <img src="https://img.shields.io/badge/platform-Linux-f59e0b?logo=linux&logoColor=white" alt="Linux">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-22c55e" alt="AGPL-3.0"></a>
-  <a href="https://github.com/Comfy-Org/ComfyUI"><img src="https://img.shields.io/badge/backend-ComfyUI-111827" alt="ComfyUI"></a>
+  <a href="https://github.com/veyqra/veyqra-app/blob/main/LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-22c55e"></a>
+  <img alt="Early alpha" src="https://img.shields.io/badge/status-early_alpha-8b5cf6">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-supported-2563eb">
+  <img alt="Linux" src="https://img.shields.io/badge/Linux-supported-f59e0b">
+  <img alt="ComfyUI backend" src="https://img.shields.io/badge/backend-ComfyUI-111827">
 </p>
 
-Veyqra is an open-source interface for local AI image generation powered by ComfyUI.
+**Veyqra is a free, open-source interface for running FLUX and SDXL image generation on your own computer.** Keep your models and generated images local, reuse your existing ComfyUI setup, and create without building node graphs. No Veyqra account or cloud subscription is required for local generation.
 
-Use FLUX and SDXL, load LoRAs, queue generations, use Image-to-Image and Inpaint, and browse your history — without having to build or manage ComfyUI node graphs.
+> **Early alpha (v0.1.0):** Local generation works today. Training, managed cloud execution, authentication, and a marketplace are roadmap items, **not current features**. Expect rough edges and help us improve them.
 
-> **v0.1.0-alpha**
->
-> Local generation is working today. Training, cloud integration, authentication, and the marketplace are planned.
+![Veyqra desktop image generation interface](docs/screenshots/generate-desktop.webp)
 
-![Veyqra Generate workspace](docs/screenshots/generate-desktop.webp)
+## Why Veyqra?
 
-## Quick start
+| | Veyqra today |
+| --- | --- |
+| **Straightforward UI** | Generate and edit images without manually wiring ComfyUI nodes |
+| **Run locally** | Use your own GPU and keep generated images on your machine |
+| **Model choice** | FLUX and SDXL workflows, plus compatible LoRAs found in ComfyUI |
+| **Useful creative tools** | Text-to-Image, Image-to-Image, and Inpaint |
+| **Keep working** | Queue multiple jobs, follow progress, and revisit history |
+| **Your existing setup** | Reuse an existing ComfyUI installation or try the guided installers |
 
-Veyqra includes automated installers for Linux and Windows. They can detect or set up ComfyUI, create isolated environments, install required custom nodes, configure the API, and optionally download supported model bundles.
+### See it in action
 
-### Linux
+| Generate | History |
+| --- | --- |
+| ![Generation workspace](docs/screenshots/generate-desktop.webp) | ![Generation history](docs/screenshots/history-desktop.png) |
 
-After cloning the repository, run:
+On mobile, Veyqra provides a responsive generation workspace:
 
-```bash
-scripts/install-linux.sh
-```
+<img src="docs/screenshots/generate-mobile.jpeg" width="330" alt="Veyqra mobile generation UI">
 
-To review the installation plan without changing the system:
+## Get started
 
-```bash
-scripts/install-linux.sh --dry-run --yes
-```
+**Requirements:** Git, Node.js 22+, npm, Python (3.12 recommended on Linux), a suitable GPU and compatible drivers. The installer can reuse or set up ComfyUI. Model weights can require substantial disk space and downloads; see the [full installation reference](#installation) before starting.
 
 ### Windows
 
-From the repository root:
+1. Clone the repository and open a terminal in its root folder.
+2. Run the guided installer:
+   ```powershell
+   scripts\install-windows.cmd
+   ```
+3. Start ComfyUI and Veyqra:
+   ```powershell
+   scripts\start-comfyui.cmd
+   npm run dev:windows
+   ```
+4. Visit **http://localhost:3000**.
 
-```powershell
-scripts\install-windows.cmd
-```
+### Linux
 
-After installation:
+1. Clone the repository and enter the project directory:
+   ```bash
+   git clone https://github.com/veyqra/veyqra-app.git
+   cd veyqra-app
+   ```
+2. Run the installer:
+   ```bash
+   scripts/install-linux.sh
+   ```
+3. Start the app (start ComfyUI if the installer did not already start it):
+   ```bash
+   npm run dev
+   ```
+4. Visit **http://localhost:3000**.
 
-```powershell
-scripts\start-comfyui.cmd
-npm run dev:windows
-```
+Want to inspect the Linux installer before making changes? Run `scripts/install-linux.sh --dry-run --yes`. Existing ComfyUI installations are supported, and large model downloads remain opt-in. Review GPU-specific limitations and manual setup instructions under [Installation](#installation).
 
-Open <http://localhost:3000>.
+## Who is Veyqra for?
 
-> Existing ComfyUI installations can be reused. Large model downloads are optional and remain an explicit user choice.
+- **Artists and creators** who want local image generation with a less technical interface.
+- **ComfyUI users** who want a focused everyday workspace for standard tasks.
+- **Open-source contributors** interested in local-first creative tools, AMD/NVIDIA compatibility, and accessible AI workflows.
 
-For advanced installer options, Docker Compose, and manual setup, see [Installation](#installation).
+## Help shape the project
 
-## Highlights
+Veyqra is community-driven and in early alpha. Try an installation, report bugs with your OS/GPU and reproduction steps, or contribute code and documentation. See [Contributing](CONTRIBUTING.md) and [Security](SECURITY.md). Feature ideas and questions are welcome in [GitHub Discussions](https://github.com/veyqra/veyqra-app/discussions).
 
-- **FLUX and SDXL** support
-- **Text to Image, Image to Image, and Inpaint**
-- **Model and LoRA catalog** loaded directly from ComfyUI
-- **Multiple queued generation jobs** with progress, status, and error reporting
-- **Automatic inpaint segmentation** through a grounding-mask workflow
-- **Persistent generation history** with reusable images and metadata
-- **Local prompt translation** from German, French, Spanish, Italian, and Portuguese to English
-- **Live local runtime status** including GPU, VRAM, and ComfyUI queue information
-- **Responsive desktop and mobile UI**
-
-## Motivation
-
-Veyqra started with a simple request: my girlfriend wanted to generate personalized images using a LoRA. The available tools were powerful, but training a LoRA, configuring ComfyUI, and building the right workflows required too much specialist knowledge for an approachable creative process.
-
-Veyqra keeps ComfyUI as the powerful backend while providing a focused interface for everyday image generation. The goal is to make local AI tooling easier to use without hiding the flexibility underneath.
-
-## Features in detail
-
-- Dashboard with job, model, and runtime status
-- FLUX and SDXL Text to Image, Image to Image, and Inpaint modes
-- Model and LoRA catalog loaded directly from ComfyUI
-- Multiple generation jobs in the ComfyUI queue
-- Progress, status, error reporting, and persistent job metadata
-- Automatic inpaint segmentation through a grounding-mask workflow
-- Optional mask prompt with automatic extraction from the positive prompt
-- Local prompt translation to English from German, French, Spanish, Italian,
-  and Portuguese
-- Voice input through the browser Speech Recognition API
-- Persistent history with image, prompt, model, and mask information
-- Direct reuse of history and preview images for Image to Image or Inpaint
-- Previous/next image navigation in Preview and History
-- Live ComfyUI GPU, VRAM, running-job, and pending-job information
-- Local notifications for completed, failed, and cancelled jobs
-- Responsive desktop and mobile navigation
-
-<p align="center">
-  <img src="docs/screenshots/generate-mobile.jpeg" width="420" alt="Veyqra mobile Generate interface with image preview and generation queue">
-</p>
+**Potential next milestones:** smoother setup, stronger queue/cancellation reliability, LoRA training, and packaging. See the [Roadmap](#roadmap) for planned work. No paid tiers are planned for the initial open-source release.
 
 ## Installation
 

@@ -13,6 +13,14 @@ import type {
 } from "@/types/generate";
 import type { ModelFamily } from "@/types/models";
 
+export type SavedPrompt = {
+  id: string;
+  name: string;
+  prompt: string;
+  negativePrompt: string;
+  createdAt: string;
+};
+
 type GenerateStore = {
   prompt: string;
   negativePrompt: string;
@@ -40,6 +48,7 @@ type GenerateStore = {
   generationError: string | null;
   queue: GenerationJob[];
   history: GeneratedImage[];
+  savedPrompts: SavedPrompt[];
 
   setPrompt: (value: string) => void;
   setNegativePrompt: (value: string) => void;
@@ -78,6 +87,8 @@ type GenerateStore = {
   ) => void;
   removeJob: (id: string) => void;
   addHistoryImage: (image: GeneratedImage) => void;
+  savePrompt: (prompt: Omit<SavedPrompt, "id" | "createdAt">) => void;
+  deleteSavedPrompt: (id: string) => void;
   clearQueue: () => void;
   resetSettings: () => void;
   getRequest: () => GenerateRequest;
@@ -128,6 +139,7 @@ export const useGenerateStore = create<GenerateStore>()(
 
       queue: [],
       history: [],
+      savedPrompts: [],
 
       setPrompt: (prompt) => set({ prompt }),
   setNegativePrompt: (negativePrompt) => set({ negativePrompt }),
@@ -204,6 +216,23 @@ export const useGenerateStore = create<GenerateStore>()(
   addHistoryImage: (image) =>
     set((state) => ({
       history: [image, ...state.history],
+    })),
+
+  savePrompt: (prompt) =>
+    set((state) => ({
+      savedPrompts: [
+        {
+          ...prompt,
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+        },
+        ...state.savedPrompts,
+      ],
+    })),
+
+  deleteSavedPrompt: (id) =>
+    set((state) => ({
+      savedPrompts: state.savedPrompts.filter((prompt) => prompt.id !== id),
     })),
 
   clearQueue: () => set({ queue: [] }),
@@ -286,6 +315,7 @@ export const useGenerateStore = create<GenerateStore>()(
         maskPrompt: state.maskPrompt,
         maskConfidence: state.maskConfidence,
         maskExpand: state.maskExpand,
+        savedPrompts: state.savedPrompts,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) {

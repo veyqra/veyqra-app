@@ -34,6 +34,16 @@ class Settings(BaseSettings):
         alias="VEYQRA_PUBLIC_API_URL",
     )
 
+    ai_toolkit_script: str = Field(
+        default="",
+        alias="VEYQRA_AI_TOOLKIT_SCRIPT",
+    )
+
+    ai_toolkit_python: str = Field(
+        default="python",
+        alias="VEYQRA_AI_TOOLKIT_PYTHON",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
