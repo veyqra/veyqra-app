@@ -12,6 +12,7 @@ import { PromptEditor } from "./PromptEditor";
 import { GenerationModePanel } from "./GenerationModePanel";
 import { InputImagePanel } from "./InputImagePanel";
 import { QueuePanel } from "./QueuePanel";
+import { TemplatePanel } from "./TemplatePanel";
 
 export function GenerateWorkspace() {
   const { t } = useI18n();
@@ -87,6 +88,7 @@ export function GenerateWorkspace() {
             </p>
           </div>
 
+          <TemplatePanel />
           <GenerationModePanel />
           <InputImagePanel />
           <PromptEditor />

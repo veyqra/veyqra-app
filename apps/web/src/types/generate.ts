@@ -92,4 +92,5 @@ export type GenerateRequest = {
   maskPrompt: string;
   maskConfidence: number;
   maskExpand: number;
+  maskImage?: string | null;
 };

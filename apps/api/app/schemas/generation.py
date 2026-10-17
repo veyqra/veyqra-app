@@ -76,10 +76,15 @@ class GenerateRequest(BaseModel):
         ge=0.0,
         le=1.0,
     )
-    # mask_image removed; automatic mask generation uses mask_prompt
+    mask_image: str | None = None
     mask_prompt: str = Field(default="", max_length=1000)
     mask_confidence: float = Field(default=0.3, ge=0.0, le=1.0)
     mask_expand: int = Field(default=40, ge=0, le=128)
+    source_history_id: str | None = None
+    upscale_model: str | None = None
+    upscale_factor: int | None = None
+    source_project: str = ""
+    source_tags: list[str] = Field(default_factory=list)
 
     @field_validator("prompt")
     @classmethod
@@ -95,6 +100,8 @@ class GenerateRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_input_image(self):
+        if self.mask_image and self.mode != GenerationMode.INPAINT:
+            raise ValueError("A manual mask is only supported for inpainting.")
         if (
             self.mode
             in {

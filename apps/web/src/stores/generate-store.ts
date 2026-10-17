@@ -42,6 +42,8 @@ type GenerateStore = {
   maskPrompt: string;
   maskConfidence: number;
   maskExpand: number;
+  manualMask: string | null;
+  setManualMask: (value: string | null) => void;
   inputImageFile: File | null;
   uploadedInputFilename: string | null;
   previewImageUrl: string | null;
@@ -127,6 +129,7 @@ const initialSettings = {
   maskPrompt: "",
   maskConfidence: 0.3,
   maskExpand: 40,
+  manualMask: null,
   uploadedInputFilename: null,
   previewImageUrl: null,
   generationError: null,
@@ -166,7 +169,8 @@ export const useGenerateStore = create<GenerateStore>()(
   setScheduler: (scheduler) => set({ scheduler }),
   setBatchSize: (batchSize) => set({ batchSize }),
   setDenoiseStrength: (denoiseStrength) =>  set({ denoiseStrength }),
-  setInputImageUrl: (inputImageUrl) => set({ inputImageUrl }),
+  setInputImageUrl: (inputImageUrl) => set({ inputImageUrl, manualMask: null }),
+  setManualMask: (manualMask) => set({ manualMask }),
   setMaskPrompt: (maskPrompt) => set({ maskPrompt }),
   setMaskConfidence: (maskConfidence) => set({ maskConfidence }),
   setMaskExpand: (maskExpand) => set({ maskExpand }),
@@ -184,6 +188,7 @@ export const useGenerateStore = create<GenerateStore>()(
       inputImageFile: null,
       inputImageUrl: imageUrl,
       uploadedInputFilename: uploaded.filename,
+      manualMask: null,
       maskPrompt:
         generationMode === "inpaint"
           ? ""
@@ -275,6 +280,7 @@ export const useGenerateStore = create<GenerateStore>()(
           maskPrompt: state.maskPrompt.trim(),
           maskConfidence: state.maskConfidence,
           maskExpand: state.maskExpand,
+          maskImage: null,
           modelId: state.modelId,
           loraId: state.loraId,
           loraStrength: state.loraStrength,

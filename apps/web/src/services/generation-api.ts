@@ -24,6 +24,7 @@ type ApiGenerateRequest = {
   mask_prompt?: string;
   mask_confidence?: number;
   mask_expand?: number;
+  mask_image?: string | null;
   steps: number;
   guidance: number;
   sampler: GenerateRequest["sampler"];
@@ -68,6 +69,7 @@ function toApiRequest(request: GenerateRequest): ApiGenerateRequest {
     mask_prompt: request.maskPrompt,
     mask_confidence: request.maskConfidence,
     mask_expand: request.maskExpand,
+    mask_image: request.maskImage,
     model_id: request.modelId,
     lora_id: request.loraId,
     lora_strength: request.loraStrength,

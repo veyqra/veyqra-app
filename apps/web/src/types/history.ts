@@ -14,6 +14,14 @@ export type HistoryItem = {
   steps: number;
   guidance: number;
   createdAt: string;
+  favorite: boolean;
+  project: string;
+  tags: string[];
+  sourceImageId: string | null;
+  upscaleModel: string | null;
+  upscaleFactor: number | null;
+  sampler: import("./generate").SamplerName;
+  scheduler: import("./generate").SchedulerName;
 };
 
 export type HistoryResponse = {

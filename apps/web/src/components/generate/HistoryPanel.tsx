@@ -10,6 +10,7 @@ import {
 import { useGenerateStore } from "@/stores/generate-store";
 import { useI18n } from "@/lib/i18n";
 import { ImageReuseActions } from "./ImageReuseActions";
+import { UpscaleAction } from "./UpscaleAction";
 
 export function HistoryPanel() {
   const { t } = useI18n();
@@ -132,6 +133,7 @@ export function HistoryPanel() {
                 imageUrl={image.imageUrl}
                 className="border-t border-zinc-800 p-2"
               />
+              <div className="px-2 pb-2"><UpscaleAction image={image} inGenerator className="w-full" /></div>
             </article>
           ))}
         </div>

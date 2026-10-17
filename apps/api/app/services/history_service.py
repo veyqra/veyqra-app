@@ -10,6 +10,8 @@ from app.services.storage_service import storage_service
 from app.schemas.history import (
     HistoryItemResponse,
     HistoryListResponse,
+    HistoryBatchUpdate,
+    normalize_tags,
 )
 
 API_ROOT = Path(__file__).resolve().parents[2]
@@ -37,6 +39,7 @@ class HistoryService:
     def list_items(
         self,
         limit: int = 100,
+        offset: int = 0,
     ) -> HistoryListResponse:
         items = self._read_items()
 
@@ -51,7 +54,7 @@ class HistoryService:
         )
 
         return HistoryListResponse(
-            items=parsed_items[:limit],
+            items=parsed_items[offset:offset + limit],
             total=len(parsed_items),
         )
 
@@ -131,6 +134,42 @@ class HistoryService:
 
         return True
 
+    def update_item(self, item_id: str, favorite: bool, project: str, tags: list[str] | None = None) -> HistoryItemResponse | None:
+        with self._lock:
+            items = self._read_items_unlocked()
+            for item in items:
+                if item.get("id") == item_id:
+                    item.update(favorite=favorite, project=project.strip())
+                    if tags is not None:
+                        item["tags"] = normalize_tags(tags)
+                    self._write_items_unlocked(items)
+                    return HistoryItemResponse.model_validate(item)
+        return None
+
+    def update_many(self, request: HistoryBatchUpdate) -> list[HistoryItemResponse]:
+        with self._lock:
+            items = self._read_items_unlocked()
+            ids = set(request.ids)
+            if ids - {item["id"] for item in items}:
+                raise KeyError("Some selected images no longer exist. Refresh the history.")
+            updated = []
+            for item in items:
+                if item["id"] not in ids:
+                    continue
+                if request.favorite is not None:
+                    item["favorite"] = request.favorite
+                if request.project is not None:
+                    item["project"] = request.project.strip()
+                if request.add_tags or request.remove_tags:
+                    item["tags"] = normalize_tags([
+                        tag for tag in item.get("tags", []) + request.add_tags
+                        if tag.strip().casefold() not in request.remove_tags
+                    ])
+                updated.append(HistoryItemResponse.model_validate(item))
+            # Validation completes for the whole selection before anything is saved.
+            self._write_items_unlocked(items)
+            return updated
+
     def clear(self) -> None:
         with self._lock:
             self._write_items_unlocked([])
@@ -166,7 +205,8 @@ class HistoryService:
         self,
         items: list[dict[str, Any]],
     ) -> None:
-        HISTORY_PATH.write_text(
+        temporary_path = HISTORY_PATH.with_suffix(".tmp")
+        temporary_path.write_text(
             json.dumps(
                 items,
                 indent=2,
@@ -174,6 +214,7 @@ class HistoryService:
             ),
             encoding="utf-8",
         )
+        temporary_path.replace(HISTORY_PATH)
 
 
 history_service = HistoryService()

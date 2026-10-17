@@ -6,15 +6,12 @@ import { useState } from "react";
 import {
   cancelGeneration,
   createGeneration,
-  getGeneration,
 } from "@/services/generation-api";
 import { uploadGenerationImage } from "@/services/uploads-api";
 import { useGenerateStore } from "@/stores/generate-store";
-import type { GenerationJob } from "@/types/generate";
+import { pollGeneration } from "@/services/generation-monitor";
 import { useI18n } from "@/lib/i18n";
 
-const POLL_INTERVAL_MS = 1_000;
-const POLL_TIMEOUT_MS = 15 * 60_000;
 
 export function GenerateButton() {
   const { t } = useI18n();
@@ -89,12 +86,17 @@ export function GenerateButton() {
         setUploadedInputFilename(uploaded.filename);
       }
 
-      // Mask uploads removed — inpainting uses automatic mask generation from prompt
-
       const request = getRequest();
+      let maskImage: string | null = null;
+      const manualMask = useGenerateStore.getState().manualMask;
+      if (generationMode === "inpaint" && manualMask) {
+        const blob = await (await fetch(manualMask)).blob();
+        maskImage = (await uploadGenerationImage(new File([blob], "mask.png", { type: "image/png" }))).filename;
+      }
 
       const createdJob = await createGeneration({
         ...request,
+        maskImage,
         inputImage:
           generationMode === "text_to_image"
             ? null
@@ -210,36 +212,4 @@ export function GenerateButton() {
       )}
     </div>
   );
-}
-
-async function pollGeneration(
-  jobId: string,
-  onUpdate: (job: GenerationJob) => void,
-  timeoutMessage: string
-): Promise<GenerationJob> {
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < POLL_TIMEOUT_MS) {
-    const job = await getGeneration(jobId);
-
-    onUpdate(job);
-
-    if (
-      job.status === "completed" ||
-      job.status === "failed" ||
-      job.status === "cancelled"
-    ) {
-      return job;
-    }
-
-    await wait(POLL_INTERVAL_MS);
-  }
-
-  throw new Error(timeoutMessage);
-}
-
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, milliseconds);
-  });
 }

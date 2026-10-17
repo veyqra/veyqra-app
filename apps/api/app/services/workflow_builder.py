@@ -307,7 +307,9 @@ def build_flux_inpaint_workflow(
         else ""
     )
 
-    if explicit_mask_prompt:
+    if request.mask_image:
+        mask_prompt = ""
+    elif explicit_mask_prompt:
         mask_source_language = (
             prompt_translation.source_language
             if prompt_translation.source_language != "en"
@@ -320,14 +322,14 @@ def build_flux_inpaint_workflow(
     else:
         mask_prompt = extract_mask_prompt(translated_prompt)
 
-    if not mask_prompt:
+    if not mask_prompt and not request.mask_image:
         raise ValueError(
             "Unable to determine the inpaint area "
             "from the prompt. Use a prompt such as "
             "'replace the red shirt with a black jacket'."
         )
 
-    generation_prompt = remove_mask_prompt(
+    generation_prompt = translated_prompt if request.mask_image else remove_mask_prompt(
         translated_prompt,
         mask_prompt,
     )

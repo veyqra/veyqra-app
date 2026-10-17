@@ -24,6 +24,7 @@ import { NotificationPopover } from "./NotificationPopover";
 import { SystemStatusPopover } from "./SystemStatusPopover";
 
 const routeInfo = {
+  "/comfyui": { title: "ComfyUI", subtitle: "Monitor and start your local ComfyUI runtime" },
   "/dashboard": {
     title: "Dashboard",
     subtitle: "Welcome back to Veyqra",

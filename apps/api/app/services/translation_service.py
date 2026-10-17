@@ -131,6 +131,12 @@ def translate_to_english(
     if not detected_language or detected_language == "en":
         return TranslationResult(value, detected_language, False)
 
+    # Short English prompts can be classified as an unsupported language.
+    # Do not initialize the heavyweight Argos runtime when no supported
+    # translation can be performed in the first place.
+    if detected_language not in SUPPORTED_SOURCE_LANGUAGES:
+        return TranslationResult(value, detected_language, False)
+
     try:
         from argostranslate import translate as argos_translate
         from minisbd import models as minisbd_models

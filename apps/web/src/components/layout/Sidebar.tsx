@@ -12,6 +12,7 @@ import {
   Cloud,
   Store,
   Settings,
+  Server,
 } from "lucide-react";
 
 import { Logo } from "./Logo";
@@ -23,6 +24,7 @@ const navigation = [
     href: "/dashboard",
     icon: LayoutDashboard,
   },
+  { title: "ComfyUI", href: "/comfyui", icon: Server },
   {
     title: "Generate",
     href: "/generate",

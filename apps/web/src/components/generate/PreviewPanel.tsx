@@ -11,6 +11,7 @@ import {
 import { useGenerateStore } from "@/stores/generate-store";
 import { useI18n } from "@/lib/i18n";
 import { ImageReuseActions } from "./ImageReuseActions";
+import { UpscaleAction } from "./UpscaleAction";
 
 export function PreviewPanel() {
   const { t } = useI18n();
@@ -53,6 +54,8 @@ export function PreviewPanel() {
     }
 
     setInputImageUrl(URL.createObjectURL(file));
+    useGenerateStore.getState().setInputImageFile(file);
+    useGenerateStore.getState().setUploadedInputFilename(null);
   }
 
   function showHistoryImage(offset: number) {
@@ -106,11 +109,14 @@ export function PreviewPanel() {
       </div>
 
       {previewImageUrl && currentHistoryIndex !== -1 && (
+        <div className="mb-4 flex flex-wrap justify-end gap-2">
         <ImageReuseActions
           imageId={history[currentHistoryIndex].id}
           imageUrl={previewImageUrl}
-          className="mb-4 sm:ml-auto sm:max-w-md"
+          className="min-w-0 flex-1 sm:max-w-md"
         />
+        <UpscaleAction image={history[currentHistoryIndex]} inGenerator />
+        </div>
       )}
 
       <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 sm:min-h-[420px] lg:min-h-[620px]">

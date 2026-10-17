@@ -96,7 +96,9 @@ class DashboardService:
     async def get_dashboard(
         self,
     ) -> DashboardResponse:
-        jobs = await generation_service.list_jobs()
+        # The recovery loop refreshes active jobs independently. A dashboard
+        # request must not depend on a reachable ComfyUI history endpoint.
+        jobs = await generation_service.list_jobs(refresh=False)
         self._refresh_comfy_data()
 
         active_jobs = sum(

@@ -19,6 +19,7 @@ const stylePresets = [
 
 export function PromptEditor() {
   const { t } = useI18n();
+  const manualMask = useGenerateStore((state) => state.manualMask);
   const prompt = useGenerateStore((state) => state.prompt);
   const negativePrompt = useGenerateStore(
     (state) => state.negativePrompt
@@ -209,7 +210,7 @@ export function PromptEditor() {
         </label>
       )}
 
-      {generationMode === "inpaint" && (
+      {generationMode === "inpaint" && !manualMask && (
         <label className="block text-sm font-medium text-zinc-300">
           {t("Mask prompt")}
           <span className="ml-2 text-xs font-normal text-zinc-600">

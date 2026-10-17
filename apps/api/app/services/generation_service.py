@@ -54,6 +54,57 @@ class StoredGenerationJob:
 
 
 class GenerationService:
+    async def list_upscale_models(self) -> list[str]:
+        info = await comfy_client.get_object_info("UpscaleModelLoader")
+        return info.get("UpscaleModelLoader", {}).get("input", {}).get("required", {}).get("model_name", [[]])[0]
+
+    async def create_upscale_job(self, image_id: str, model: str, factor: int) -> GenerationJobResponse:
+        source = history_service.get_item(image_id)
+        if source is None:
+            raise ValueError("History image not found.")
+        path = storage_service.get_image_path(source.image_filename or "")
+        if path is None:
+            raise ValueError("Stored image not found.")
+        if factor not in (2, 3, 4):
+            raise ValueError("Upscale factor must be 2, 3 or 4.")
+        if model not in await self.list_upscale_models():
+            raise ValueError("Upscale model is unavailable. Install a model in ComfyUI/models/upscale_models and refresh.")
+        width, height = self._read_image_size(path)
+        if width * height * factor * factor > 40_000_000:
+            raise ValueError("Upscaled image exceeds the 40 megapixel limit. Choose a smaller factor.")
+        filename = await comfy_client.upload_image(path, path.name)
+        workflow = {
+            "1": {"class_type": "LoadImage", "inputs": {"image": filename}},
+            "2": {"class_type": "UpscaleModelLoader", "inputs": {"model_name": model}},
+            "3": {"class_type": "ImageUpscaleWithModel", "inputs": {"upscale_model": ["2", 0], "image": ["1", 0]}},
+            "4": {"class_type": "ImageScale", "inputs": {"image": ["3", 0], "upscale_method": "lanczos", "width": width * factor, "height": height * factor, "crop": "disabled"}},
+            "5": {"class_type": "SaveImage", "inputs": {"images": ["4", 0], "filename_prefix": "Veyqra-upscale"}},
+        }
+        request = GenerateRequest(
+            prompt=source.prompt, negative_prompt=source.negative_prompt,
+            model_id=source.model_id, lora_id=source.lora_id, lora_strength=source.lora_strength,
+            resolution_id="square", seed=source.seed, steps=source.steps, guidance=source.guidance,
+            sampler=source.sampler, scheduler=source.scheduler,
+            source_history_id=source.id, upscale_model=model, upscale_factor=factor,
+            source_project=source.project,
+            source_tags=source.tags,
+        )
+        job_id = str(uuid4())
+        response = GenerationJobResponse(
+            id=job_id, prompt=source.prompt, model_name=f"{source.model_name} · Upscale {factor}×",
+            status=GenerationStatus.QUEUED, progress=0, created_at=datetime.now(UTC),
+        )
+        stored = StoredGenerationJob(
+            response=response, request=request, actual_seed=source.seed,
+            output_width=width * factor, output_height=height * factor,
+        )
+        stored.comfy_prompt_id = await comfy_client.queue_prompt(workflow, client_id=job_id)
+        with self._lock:
+            self._jobs[job_id] = stored
+        self._persist_job(job_id, stored)
+        self._start_progress_monitor(job_id)
+        return response
+
     def __init__(self) -> None:
         self._jobs: dict[str, StoredGenerationJob] = {}
         self._progress_tasks: dict[str, asyncio.Task[None]] = {}
@@ -158,6 +209,7 @@ class GenerationService:
         # ensure it exists and upload it to ComfyUI so the workflow can reference it.
         comfy_filename: str | None = None
         input_image_size: tuple[int, int] | None = None
+        mask_filename: str | None = None
 
         try:
             selected_model, selected_lora = (
@@ -176,6 +228,8 @@ class GenerationService:
                 if not request.input_image:
                     raise ValueError("Input image is required.")
 
+                if Path(request.input_image).name != request.input_image:
+                    raise ValueError("Invalid input image filename.")
                 input_path = UPLOAD_DIR / request.input_image
 
                 if not input_path.exists():
@@ -194,12 +248,25 @@ class GenerationService:
                     )
                 )
 
-            built = build_generation_workflow(
+            if request.mask_image:
+                if Path(request.mask_image).name != request.mask_image:
+                    raise ValueError("Invalid mask filename.")
+                mask_path = UPLOAD_DIR / request.mask_image
+                if self._read_image_size(mask_path) != input_image_size:
+                    raise ValueError("Mask dimensions must match the input image.")
+                with Image.open(mask_path) as mask:
+                    if mask.convert("L").getextrema()[1] == 0:
+                        raise ValueError("Paint at least one area in the manual mask.")
+                mask_filename = await comfy_client.upload_image(mask_path, request.mask_image)
+
+            built = await asyncio.to_thread(
+                build_generation_workflow,
                 request=request,
                 model=selected_model,
                 lora=selected_lora,
                 input_image_filename=comfy_filename,
                 input_image_size=input_image_size,
+                mask_image_filename=mask_filename,
             )
         except Exception as error:
             failed_response = response.model_copy(
@@ -309,8 +376,16 @@ class GenerationService:
 
     async def list_jobs(
         self,
+        *,
+        refresh: bool = True,
     ) -> list[GenerationJobResponse]:
         with self._lock:
+            if not refresh:
+                return sorted(
+                    [job.response for job in self._jobs.values()],
+                    key=lambda job: job.created_at,
+                    reverse=True,
+                )
             job_ids = list(self._jobs.keys())
 
         jobs: list[GenerationJobResponse] = []
@@ -600,6 +675,13 @@ class GenerationService:
                         stored_job.request.guidance
                     ),
                     created_at=image.created_at,
+                    sampler=stored_job.request.sampler,
+                    scheduler=stored_job.request.scheduler,
+                    project=stored_job.request.source_project,
+                    tags=stored_job.request.source_tags,
+                    source_image_id=stored_job.request.source_history_id,
+                    upscale_model=stored_job.request.upscale_model,
+                    upscale_factor=stored_job.request.upscale_factor,
                 )
 
                 history_service.add_item(
@@ -718,6 +800,14 @@ class GenerationService:
                         value=data.get("value"),
                         maximum=data.get("max"),
                     )
+
+                if (message_type == "executing" and data.get("node") is not None
+                        and data.get("prompt_id") == prompt_id):
+                    with self._lock:
+                        stored = self._jobs.get(job_id)
+                        if stored and stored.response.status == GenerationStatus.QUEUED:
+                            stored.response = stored.response.model_copy(update={"status": GenerationStatus.RUNNING, "progress": 1})
+                            self._persist_job(job_id, stored)
 
                 if (
                     message_type == "executing"

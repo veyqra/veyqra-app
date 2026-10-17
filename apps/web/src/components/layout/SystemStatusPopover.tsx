@@ -2,6 +2,7 @@
 
 import { Cpu, Server, X } from "lucide-react";
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 
 type SystemStatusPopoverProps = {
@@ -121,6 +122,7 @@ export function SystemStatusPopover({
       </div>
 
       <div className="space-y-2 p-3">
+        <Link href="/comfyui" onClick={onClose} className="block rounded-xl border border-violet-800 px-3 py-3 text-center text-sm text-violet-300 hover:bg-violet-500/10">{t("ComfyUI overview and startup")} →</Link>
         <div className="flex items-center justify-between rounded-xl bg-zinc-900/70 px-3 py-3">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-950">

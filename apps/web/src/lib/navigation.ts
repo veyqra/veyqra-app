@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Settings,
   Store,
+  Server,
 } from "lucide-react";
 
 export const navigation = [
@@ -15,6 +16,7 @@ export const navigation = [
     href: "/dashboard",
     icon: LayoutDashboard,
   },
+  { title: "ComfyUI", href: "/comfyui", icon: Server },
   {
     title: "Generate",
     href: "/generate",

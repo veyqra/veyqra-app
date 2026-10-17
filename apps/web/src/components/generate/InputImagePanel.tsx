@@ -10,10 +10,12 @@ import {
   DragEvent,
   useEffect,
   useRef,
+  useState,
 } from "react";
 
 import { useGenerateStore } from "@/stores/generate-store";
 import { useI18n } from "@/lib/i18n";
+import { MaskEditor } from "./MaskEditor";
 
 const ACCEPTED_TYPES = [
   "image/png",
@@ -23,6 +25,9 @@ const ACCEPTED_TYPES = [
 
 export function InputImagePanel() {
   const { t } = useI18n();
+  const [editingMask, setEditingMask] = useState(false);
+  const manualMask = useGenerateStore((state) => state.manualMask);
+  const setManualMask = useGenerateStore((state) => state.setManualMask);
   const generationMode = useGenerateStore(
     (state) => state.generationMode
   );
@@ -134,6 +139,14 @@ export function InputImagePanel() {
 
   return (
     <div className="space-y-3">
+      {generationMode === "inpaint" && previewUrl && <div className="space-y-2 rounded-xl border border-violet-900 bg-violet-500/5 p-3">
+        <p className="text-xs text-zinc-400">{manualMask ? t("Manual mask active. Painted areas will be edited.") : t("Automatic mask detection is active.")}</p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setEditingMask(true)} className="rounded-lg border border-violet-700 px-3 py-2 text-xs text-violet-300">{t("Edit inpaint mask")}</button>
+          {manualMask && <button type="button" onClick={() => setManualMask(null)} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs">{t("Use automatic mask")}</button>}
+        </div>
+      </div>}
+      {editingMask && previewUrl && generationMode === "inpaint" && <MaskEditor key={previewUrl} imageUrl={previewUrl} onClose={() => setEditingMask(false)} />}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-zinc-300">

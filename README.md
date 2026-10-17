@@ -92,6 +92,15 @@ Veyqra is community-driven and in early alpha. Try an installation, report bugs 
 
 ## Features in detail
 
+**Manual inpaint masks:** Select Inpaint, choose an input image, and click
+**Edit inpaint mask**. Paint the area to change with the brush, remove strokes
+with the eraser, adjust brush size, undo strokes, or clear the mask. Choose
+**Apply mask**, then generate. Manual masks work with FLUX Fill and SDXL,
+bypass automatic grounding, and preserve the original pixels outside the painted
+area. The mask is exported at the input image's original size. Replacing the
+input clears its mask; **Use automatic mask** returns to prompt-based detection.
+Masks are kept only in the current session and are not included in saved templates.
+
 - Dashboard with job, model, and runtime status
 - FLUX and SDXL Text to Image, Image to Image, and Inpaint modes
 - Model and LoRA catalog loaded directly from ComfyUI
@@ -109,6 +118,54 @@ Veyqra is community-driven and in early alpha. Try an installation, report bugs 
 - Responsive desktop and mobile navigation
 
 ## Installation
+
+### Templates, comparison, projects, and upscaling
+
+- **Generation templates:** In Generate, enter a template name and select Save.
+  Templates include prompts, model/LoRA selection, seed, sampler, resolution,
+  generation mode, and mask settings. Select a saved template and choose Load
+  to restore it. Templates are stored in the current browser; input image files
+  are not included. Image-to-image and Inpaint still need an input image.
+- **Image comparison:** In History, select Compare on two images, then choose
+  Compare selected. Both views use the same zoom level; parameter differences
+  are highlighted below them. Escape closes the comparison.
+- **Favorites and projects:** Mark images as favorites or enter a project name
+  and choose Save. Existing names appear as suggestions. Use the history filters
+  to show favorites or a specific project; clearing and saving a project name
+  removes that assignment. These details are stored with the server-side history.
+- **Organize history:** Cards show project and tag labels; expand **Actions and
+  details** to edit a single image's project and comma-separated tags. Tags are
+  case-insensitive and normalized on save (up to 30 tags, 50 characters each).
+  Search matches prompt words, model, LoRA, project, and tags. Combine favorites,
+  project, unassigned, tag, and model filters, and sort by date, model, or image
+  size. History displays 24 images per page with lazy-loaded thumbnails.
+  Select image checkboxes or choose **Select page** to organize multiple images:
+  assign/remove a project, mark/unmark favorites, or add/remove tags. Selection
+  remains across pages and filters, including images currently hidden by filters;
+  clear it before starting a different selection. Each action supports up to
+  500 images and preserves unrelated metadata. Upscaled copies inherit source
+  project and tags. Changes are saved on the server.
+- **AI upscaling:** Choose Upscale on a history image, select an installed model,
+  and choose 2×, 3×, or 4×. This requires a compatible ComfyUI upscale model in
+  `ComfyUI/models/upscale_models`; no model is downloaded automatically. The
+  selected model enhances the image before resizing it to the requested size.
+  Outputs are limited to 40 megapixels. Follow or cancel the job under Jobs.
+  The original remains available and the result is saved as a new history image
+  with its source reference, upscale model, scale factor, and project.
+  Upscale is also available directly beside the image preview and on recent
+  images in Generate. When started there, progress appears in the generator
+  queue and the finished image opens automatically in the preview. Prompts and
+  generation parameters remain available for the next image. The history detail
+  view also provides a direct Upscale action.
+
+Creative-tool regression checks:
+
+```powershell
+# From apps/web:
+node --test tests/templates.test.mjs tests/history-organization.test.mjs
+# From apps/api (Windows; use .venv/bin/python on Linux):
+.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
 
 ### Requirements
 
@@ -611,6 +668,23 @@ editor.
 
 ## System status and notifications
 
+Open **ComfyUI** in the sidebar, or choose **ComfyUI overview and startup** in
+the system status popover, to inspect the connection, GPU/VRAM, RAM, ComfyUI
+queue, software versions, installation paths, and required custom nodes.
+The overview refreshes automatically every five seconds; extension checks are
+cached for thirty seconds. Queue counts include workflows started outside Veyqra.
+
+Choose **Start ComfyUI** to launch the local installation configured by the
+Veyqra installer (`config/local-install.windows.json` on Windows or
+`config/local-install.env` on Linux). Startup runs in the background without
+opening a console window on Windows. The page shows startup progress, failures,
+and the latest eighty log lines. Logs are written to
+`apps/api/data/comfyui-runtime.log` and reset on each new launch. An already
+reachable ComfyUI installation is reused. The start action is unavailable for
+remote endpoints, missing installations, or mismatched configured ports.
+The button starts ComfyUI on the **API host**; it does not install ComfyUI or
+download models. **Open ComfyUI** opens its configured URL in a separate tab.
+
 Local runtime information comes directly from ComfyUI:
 
 - `/system_stats` provides device, GPU name, and VRAM information
@@ -689,6 +763,8 @@ All application endpoints use `/api/v1` as their default prefix.
 | --- | --- | --- |
 | `GET` | `/health` | Check API health |
 | `GET` | `/comfyui/status` | Check the ComfyUI connection |
+| `GET` | `/comfyui/overview` | Inspect runtime, startup state, queue, extensions, and logs |
+| `POST` | `/comfyui/start` | Start the configured local ComfyUI installation |
 | `GET` | `/dashboard` | Get statistics, jobs, GPU, VRAM, and queue data |
 | `POST` | `/generations` | Create and queue a generation |
 | `GET` | `/generations` | List generation jobs |
@@ -697,6 +773,8 @@ All application endpoints use `/api/v1` as their default prefix.
 | `DELETE` | `/generations` | Clear the job list |
 | `GET` | `/models/catalog` | Get models and LoRAs from ComfyUI |
 | `GET` | `/history` | List history items |
+| `PATCH` | `/history` | Organize a selection of history images |
+| `PATCH` | `/history/{id}` | Update favorite, project, and tags |
 | `DELETE` | `/history/{id}` | Delete a history item |
 | `DELETE` | `/history` | Clear history |
 | `POST` | `/uploads/image` | Upload an input image |
